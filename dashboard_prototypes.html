@@ -1,583 +1,434 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>B24 · Задачи (февраль vs март)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://kit.fontawesome.com/a2d9d5a54d.js" crossorigin="anonymous"></script>
-  </head>
-  <body class="bg-slate-100 text-slate-800 font-sans">
-    <div class="min-h-screen">
-      <header class="bg-white shadow-sm border-b border-slate-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 class="text-2xl font-bold text-slate-900">Аналитика задач Б24</h1>
-            <p class="text-sm text-slate-500">Прототип: два XLSX (2026_02 и 2026_03) + мультивкладки по листам</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <span id="loadState" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
-              <i class="fa-solid fa-hourglass-half"></i> Загружаю файлы...
-            </span>
-            <button id="reloadBtn" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm hover:bg-slate-100">Перечитать файлы</button>
-          </div>
-        </div>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B24 · Прототипы A4 дашборда</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --card-2: #243244;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22d3ee;
+      --accent-2: #a78bfa;
+      --good: #34d399;
+      --warn: #f59e0b;
+      --bad: #f87171;
+      --border: #334155;
+    }
 
-      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
-            <div>
-              <h2 class="font-semibold text-slate-900 mb-1">Источники данных</h2>
-              <ul class="list-disc ml-5 text-slate-600">
-                <li><code>directions_report_prev_month_2026_02.xlsx</code></li>
-                <li><code>directions_report_current_month_2026_03.xlsx</code></li>
-              </ul>
-              <p class="text-slate-500 mt-2">Если файл/колонки отличаются — отображается предупреждение и дашборд останется в демо-режиме.</p>
-            </div>
-            <div id="mappingInfo" class="text-slate-600"></div>
-          </div>
-        </section>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at 20% 0%, #16213a 0%, var(--bg) 45%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-3">
-          <div class="flex flex-wrap gap-2" id="tabButtons"></div>
-        </section>
+    .wrap { max-width: 1320px; margin: 0 auto; }
 
-        <section id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4"></section>
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .title { font-size: 28px; margin: 0 0 6px; }
+    .subtitle { margin: 0; color: var(--muted); }
 
-        <!-- TAB 1 -->
-        <section data-tab-panel="v1" class="tab-panel space-y-6">
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-4">Поток статусов (март)</h2>
-              <div class="h-[360px]"><canvas id="statusFunnelChart"></canvas></div>
-            </article>
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-4">Уровни задач L1/L2/L3 (март)</h2>
-              <div class="h-[360px]"><canvas id="levelSplitChart"></canvas></div>
-            </article>
-          </div>
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
 
-          <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 overflow-x-auto">
-            <h2 class="text-lg font-semibold mb-4">Топ направлений по объёму задач (март)</h2>
-            <table class="min-w-full text-sm" id="topDirectionsTable"></table>
-          </article>
-        </section>
+    .tab-btn {
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #0f3a49, #1f2d4a);
+      border-color: #3b82f6;
+      color: #dbeafe;
+    }
 
-        <!-- TAB 2 -->
-        <section data-tab-panel="v2" class="tab-panel hidden space-y-6">
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-1">Средний цикл закрытия (факт vs норма)</h2>
-              <p class="text-sm text-slate-500 mb-4">Норма: L1=2 дня, L2=5 дней, L3=10 дней</p>
-              <div class="h-[360px]"><canvas id="slaChart"></canvas></div>
-            </article>
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-4">Возраст открытых задач (март)</h2>
-              <div class="h-[360px]"><canvas id="ageBucketChart"></canvas></div>
-            </article>
-          </div>
+    .tab {
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(160deg, var(--panel), #0b1220 70%);
+      padding: 12px;
+    }
+    .tab.active { display: block; }
 
-          <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 overflow-x-auto">
-            <h2 class="text-lg font-semibold mb-4">Алерты (топ просрочек)</h2>
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="text-left text-slate-500 border-b border-slate-200">
-                  <th class="py-2 pr-3">Задача</th><th class="py-2 pr-3">Ответственный</th><th class="py-2 pr-3">Направление</th><th class="py-2">Проблема</th>
-                </tr>
-              </thead>
-              <tbody id="alertsBody"></tbody>
-            </table>
-          </article>
-        </section>
+    /* A4 landscape area */
+    .a4 {
+      width: 100%;
+      aspect-ratio: 1.414/1;
+      background: linear-gradient(145deg, #0f172a, #121826);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      grid-template-rows: auto 1fr;
+    }
 
-        <!-- TAB 3 -->
-        <section data-tab-panel="v3" class="tab-panel hidden space-y-6">
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-4">Нагрузка по направлениям (открытые, март)</h2>
-              <div class="h-[360px]"><canvas id="workloadChart"></canvas></div>
-            </article>
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-4">Изменение объёма: февраль → март</h2>
-              <div class="h-[360px]"><canvas id="deltaChart"></canvas></div>
-            </article>
-          </div>
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      background: rgba(36, 50, 68, .45);
+      font-size: 13px;
+      color: var(--muted);
+    }
 
-          <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 overflow-x-auto">
-            <h2 class="text-lg font-semibold mb-4">Pipeline Health (направление × уровень)</h2>
-            <table class="min-w-full text-sm border-collapse" id="pipelineTable"></table>
-          </article>
-        </section>
+    .layout { display: grid; gap: 10px; min-height: 0; }
+    .card {
+      background: rgba(31, 41, 55, .7);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .card h4 { margin: 0 0 8px; font-size: 14px; }
 
-        <!-- TAB 4 -->
-        <section data-tab-panel="v4" class="tab-panel hidden space-y-6">
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-4">Качество: причины просрочки / возврата</h2>
-              <div class="h-[360px]"><canvas id="reasonChart"></canvas></div>
-            </article>
-            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <h2 class="text-lg font-semibold mb-4">Стабильность закрытия по неделям (март)</h2>
-              <div class="h-[360px]"><canvas id="weeklyCloseChart"></canvas></div>
-            </article>
-          </div>
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .kpi {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, .55);
+      padding: 8px;
+    }
+    .kpi .label { color: var(--muted); font-size: 12px; }
+    .kpi .value { font-size: 19px; font-weight: 700; margin-top: 2px; }
+    .kpi .delta.good { color: var(--good); }
+    .kpi .delta.bad { color: var(--bad); }
 
-          <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 overflow-x-auto">
-            <h2 class="text-lg font-semibold mb-4">Рейтинг ответственных</h2>
-            <table class="min-w-full text-sm" id="ownerTable"></table>
-          </article>
-        </section>
-      </main>
+    .bars { display: grid; gap: 7px; }
+    .bar-line { display: grid; grid-template-columns: 120px 1fr 48px; gap: 8px; align-items: center; font-size: 12px; }
+    .bar-track { height: 10px; background: #0b1220; border-radius: 999px; border: 1px solid var(--border); overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #60a5fa); }
+
+    .table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .table th, .table td { border-bottom: 1px solid #2b3547; padding: 6px; text-align: left; }
+    .table th { color: #93c5fd; font-weight: 600; }
+
+    .legend { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* Variant layouts */
+    #v1 .layout { grid-template-columns: 1.2fr 1fr; grid-template-rows: auto 1fr; }
+    #v1 .kpis { grid-column: 1 / span 2; }
+
+    #v2 .layout { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+    #v3 .layout { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto 1fr; }
+    #v3 .kpis { grid-column: 1 / span 3; }
+
+    #v4 .layout { grid-template-columns: 1.2fr 1fr; grid-template-rows: 1fr 1fr; }
+
+    .radar {
+      width: 100%;
+      height: 100%;
+      min-height: 220px;
+    }
+
+    .footnote {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .hint {
+      margin: 8px 2px 0;
+      color: #cbd5e1;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1000px) {
+      .a4 { aspect-ratio: auto; min-height: 760px; }
+      #v1 .layout, #v2 .layout, #v3 .layout, #v4 .layout { grid-template-columns: 1fr; grid-template-rows: auto; }
+      #v1 .kpis, #v3 .kpis { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h1 class="title">B24 · Прототипы дашборда задач (A4)</h1>
+        <p class="subtitle">4 варианта компоновки для BI Битрикс24: фокус на функционале, логике и сравнении февраль ↔ март.</p>
+      </div>
     </div>
 
-    <script>
-      const FILES = {
-        prev: "directions_report_prev_month_2026_02.xlsx",
-        curr: "directions_report_current_month_2026_03.xlsx"
-      };
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="v1">Вариант 1 · KPI + Воронка</button>
+      <button class="tab-btn" data-tab="v2">Вариант 2 · SLA/Сроки + Риски</button>
+      <button class="tab-btn" data-tab="v3">Вариант 3 · Нагрузка по уровням</button>
+      <button class="tab-btn" data-tab="v4">Вариант 4 · Quality Cockpit</button>
+    </div>
 
-      const dashboardTabs = [
-        { id: "v1", title: "1. KPI + Поток" },
-        { id: "v2", title: "2. SLA + Риски" },
-        { id: "v3", title: "3. Нагрузка" },
-        { id: "v4", title: "4. Quality" }
-      ];
-
-      const colSynonyms = {
-        id: ["id", "ид", "номер", "задача"],
-        title: ["название", "тема", "заголовок", "task", "name"],
-        created: ["дата создания", "создан", "created", "создана"],
-        closed: ["дата закрытия", "закрыт", "closed", "дата завершения"],
-        deadline: ["крайний срок", "срок", "deadline", "дедлайн", "плановая дата"],
-        status: ["статус", "stage", "состояние"],
-        level: ["уровень", "сложность", "level", "l1", "l2", "l3"],
-        direction: ["направление", "подразделение", "департамент", "отдел", "блок"],
-        owner: ["ответственный", "исполнитель", "постановщик", "менеджер"],
-        reason: ["причина", "комментарий", "основание", "возврат"],
-        priority: ["приоритет", "важность"]
-      };
-
-      const charts = {};
-
-      const el = (id) => document.getElementById(id);
-
-      const norm = (v) => String(v ?? "").toLowerCase().trim();
-
-      function parseDate(v) {
-        if (v == null || v === "") return null;
-        if (typeof v === "number") {
-          const d = XLSX.SSF.parse_date_code(v);
-          if (!d) return null;
-          return new Date(Date.UTC(d.y, d.m - 1, d.d));
-        }
-        const s = String(v).replace(/\./g, "-").replace(/\//g, "-");
-        const d = new Date(s);
-        return Number.isNaN(d.getTime()) ? null : d;
-      }
-
-      function pickColumn(headers, key) {
-        const candidates = colSynonyms[key];
-        for (const h of headers) {
-          const hh = norm(h);
-          if (candidates.some((c) => hh.includes(c))) return h;
-        }
-        return null;
-      }
-
-      function parseWorkbook(bin, monthLabel) {
-        const wb = XLSX.read(bin, { type: "array" });
-        const merged = [];
-        const sheetStats = [];
-
-        wb.SheetNames.forEach((sheetName) => {
-          const ws = wb.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
-          if (!rows.length) return;
-
-          const headers = Object.keys(rows[0]);
-          const map = {
-            id: pickColumn(headers, "id"),
-            title: pickColumn(headers, "title"),
-            created: pickColumn(headers, "created"),
-            closed: pickColumn(headers, "closed"),
-            deadline: pickColumn(headers, "deadline"),
-            status: pickColumn(headers, "status"),
-            level: pickColumn(headers, "level"),
-            direction: pickColumn(headers, "direction"),
-            owner: pickColumn(headers, "owner"),
-            reason: pickColumn(headers, "reason"),
-            priority: pickColumn(headers, "priority")
-          };
-
-          const normalizedRows = rows.map((r, idx) => {
-            const created = parseDate(map.created ? r[map.created] : null);
-            const closed = parseDate(map.closed ? r[map.closed] : null);
-            const deadline = parseDate(map.deadline ? r[map.deadline] : null);
-            const status = map.status ? String(r[map.status] ?? "") : "";
-            const levelRaw = map.level ? String(r[map.level] ?? "") : "";
-            const level = (levelRaw.match(/L[1-3]/i)?.[0] || "L?").toUpperCase();
-            return {
-              sourceMonth: monthLabel,
-              sheet: sheetName,
-              id: map.id ? r[map.id] : `${sheetName}-${idx + 1}`,
-              title: map.title ? String(r[map.title] ?? "") : `Задача ${idx + 1}`,
-              created,
-              closed,
-              deadline,
-              status: status || (closed ? "Закрыта" : "В работе"),
-              level,
-              direction: map.direction ? String(r[map.direction] ?? "Не указано") : "Не указано",
-              owner: map.owner ? String(r[map.owner] ?? "Не указан") : "Не указан",
-              reason: map.reason ? String(r[map.reason] ?? "") : "",
-              priority: map.priority ? String(r[map.priority] ?? "") : ""
-            };
-          });
-
-          merged.push(...normalizedRows);
-          sheetStats.push({ sheetName, rows: normalizedRows.length, map });
-        });
-
-        return { rows: merged, sheetStats };
-      }
-
-      async function loadData() {
-        const loadState = el("loadState");
-        loadState.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700";
-        loadState.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Загружаю файлы...';
-
-        try {
-          const [prevRes, currRes] = await Promise.all([fetch(FILES.prev), fetch(FILES.curr)]);
-          if (!prevRes.ok || !currRes.ok) {
-            throw new Error("Один или оба XLSX не найдены рядом с index.html");
-          }
-
-          const [prevBin, currBin] = await Promise.all([prevRes.arrayBuffer(), currRes.arrayBuffer()]);
-          const prev = parseWorkbook(prevBin, "2026-02");
-          const curr = parseWorkbook(currBin, "2026-03");
-
-          const dataset = { prev: prev.rows, curr: curr.rows, prevStats: prev.sheetStats, currStats: curr.sheetStats };
-          renderAll(dataset);
-
-          loadState.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700";
-          loadState.innerHTML = '<i class="fa-solid fa-circle-check"></i> Данные загружены';
-        } catch (err) {
-          console.error(err);
-          renderAll(buildDemoDataset());
-          loadState.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700";
-          loadState.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> XLSX не найдены: показан демо-режим';
-        }
-      }
-
-      function buildDemoDataset() {
-        const makeRows = (m) => {
-          const dirs = ["Производство", "Логистика", "Закупки", "Техподдержка", "Качество"];
-          const sts = ["Новая", "В работе", "На проверке", "Закрыта", "Просрочена"];
-          const owners = ["Иванов", "Петров", "Сидоров", "Кузнецов", "Миронов"];
-          const res = [];
-          for (let i = 1; i <= 180; i++) {
-            const created = new Date(`2026-${m}-` + String((i % 27) + 1).padStart(2, "0"));
-            const isClosed = i % 4 !== 0;
-            const cycle = (i % 11) + 1;
-            const closed = isClosed ? new Date(created.getTime() + cycle * 86400000) : null;
-            const deadline = new Date(created.getTime() + ((i % 8) + 2) * 86400000);
-            const level = ["L1", "L2", "L3"][i % 3];
-            const status = closed ? (closed > deadline ? "Просрочена" : "Закрыта") : sts[i % sts.length];
-            res.push({
-              sourceMonth: `2026-${m}`,
-              sheet: i % 2 ? "Основной" : "Вспомогательный",
-              id: i,
-              title: `Задача ${i}`,
-              created,
-              closed,
-              deadline,
-              status,
-              level,
-              direction: dirs[i % dirs.length],
-              owner: owners[i % owners.length],
-              reason: status === "Просрочена" ? ["Ожидание согласования", "Нет данных", "Зависимость от смежных"][i % 3] : "",
-              priority: ["Низкий", "Средний", "Высокий"][i % 3]
-            });
-          }
-          return res;
-        };
-
-        return {
-          prev: makeRows("02"),
-          curr: makeRows("03"),
-          prevStats: [{ sheetName: "Основной", rows: 90, map: {} }, { sheetName: "Вспомогательный", rows: 90, map: {} }],
-          currStats: [{ sheetName: "Основной", rows: 90, map: {} }, { sheetName: "Вспомогательный", rows: 90, map: {} }]
-        };
-      }
-
-      function daysBetween(a, b) {
-        if (!a || !b) return null;
-        return Math.round((b - a) / 86400000);
-      }
-
-      function isClosed(r) {
-        return !!r.closed || /закры|выполн|done/i.test(r.status);
-      }
-
-      function isOverdue(r) {
-        if (!r.deadline) return false;
-        if (isClosed(r) && r.closed) return r.closed > r.deadline;
-        return new Date() > r.deadline && !isClosed(r);
-      }
-
-      function groupCount(rows, keyFn) {
-        const map = new Map();
-        rows.forEach((r) => {
-          const k = keyFn(r);
-          map.set(k, (map.get(k) || 0) + 1);
-        });
-        return map;
-      }
-
-      function topN(map, n = 8) {
-        return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
-      }
-
-      function destroyChart(id) {
-        if (charts[id]) charts[id].destroy();
-      }
-
-      function metricCard({ title, value, diff, icon, positive = true }) {
-        const trendClass = positive ? "text-emerald-600" : "text-rose-600";
-        const trendIcon = positive ? "fa-arrow-trend-up" : "fa-arrow-trend-down";
-        return `
-          <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div class="flex justify-between items-start mb-3">
-              <h3 class="text-sm font-medium text-slate-600">${title}</h3>
-              <i class="fa-solid ${icon} text-slate-400"></i>
+    <!-- Variant 1 -->
+    <section class="tab active" id="v1">
+      <div class="a4">
+        <div class="topline">
+          <div>Период: февраль и март · Срез: все подразделения · Типы задач: L1/L2/L3</div>
+          <div>Логика: обзор результата + конверсия потока</div>
+        </div>
+        <div class="layout">
+          <div class="card kpis">
+            <h4>Ключевые KPI (месяц к месяцу)</h4>
+            <div class="kpi-grid">
+              <div class="kpi"><div class="label">Всего задач</div><div class="value">12 480</div><div class="delta good">+8.3%</div></div>
+              <div class="kpi"><div class="label">Закрыто в срок</div><div class="value">84%</div><div class="delta good">+3.1 п.п.</div></div>
+              <div class="kpi"><div class="label">Просрочено</div><div class="value">11%</div><div class="delta bad">+1.2 п.п.</div></div>
+              <div class="kpi"><div class="label">Средний цикл</div><div class="value">4.7 дн</div><div class="delta good">-0.6 дн</div></div>
             </div>
-            <p class="text-2xl font-bold text-slate-900 mb-2">${value}</p>
-            <p class="text-sm font-semibold ${trendClass}"><i class="fa-solid ${trendIcon} mr-1"></i>${diff}</p>
-          </article>`;
-      }
+          </div>
+          <div class="card">
+            <h4>Воронка задач по этапам</h4>
+            <div class="bars">
+              <div class="bar-line"><span>Создано</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><strong>100%</strong></div>
+              <div class="bar-line"><span>В работе</span><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div><strong>78%</strong></div>
+              <div class="bar-line"><span>На проверке</span><div class="bar-track"><div class="bar-fill" style="width:54%"></div></div><strong>54%</strong></div>
+              <div class="bar-line"><span>Закрыто</span><div class="bar-track"><div class="bar-fill" style="width:46%"></div></div><strong>46%</strong></div>
+            </div>
+            <p class="legend">Сценарий: быстро видно, где «теряется» поток и на какой стадии растет очередь.</p>
+          </div>
+          <div class="card">
+            <h4>Причины отклонений / возвратов</h4>
+            <div class="bars">
+              <div class="bar-line"><span>Неполные данные</span><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div><strong>65</strong></div>
+              <div class="bar-line"><span>Неверный приоритет</span><div class="bar-track"><div class="bar-fill" style="width:52%"></div></div><strong>52</strong></div>
+              <div class="bar-line"><span>Зависимость от смежных</span><div class="bar-track"><div class="bar-fill" style="width:39%"></div></div><strong>39</strong></div>
+              <div class="bar-line"><span>Нет исполнителя</span><div class="bar-track"><div class="bar-fill" style="width:27%"></div></div><strong>27</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Когда выбирать: если нужен «директорский» обзор на 1 экран с быстрым сравнением месяца и мест потерь в процессе.</p>
+    </section>
 
-      function renderAll(dataset) {
-        renderTabButtons();
-        renderMapping(dataset);
-        renderKPI(dataset);
-        renderV1(dataset);
-        renderV2(dataset);
-        renderV3(dataset);
-        renderV4(dataset);
-      }
+    <!-- Variant 2 -->
+    <section class="tab" id="v2">
+      <div class="a4">
+        <div class="topline">
+          <div>Период: февраль и март · Фокус: соблюдение SLA и контроль рисков</div>
+          <div>Логика: план/факт + алерты проблемных зон</div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h4>Скорость этапов vs норматив (SLA)</h4>
+            <svg viewBox="0 0 520 220" width="100%" height="220" aria-label="sla chart">
+              <line x1="40" y1="180" x2="500" y2="180" stroke="#334155" />
+              <line x1="40" y1="30" x2="40" y2="180" stroke="#334155" />
+              <polyline points="60,140 140,120 220,110 300,98 380,92 460,84" fill="none" stroke="#22d3ee" stroke-width="3"/>
+              <polyline points="60,130 140,122 220,115 300,113 380,110 460,108" fill="none" stroke="#a78bfa" stroke-width="3" stroke-dasharray="6 6"/>
+              <text x="46" y="197" fill="#9ca3af" font-size="11">T1</text>
+              <text x="126" y="197" fill="#9ca3af" font-size="11">T2</text>
+              <text x="206" y="197" fill="#9ca3af" font-size="11">T3</text>
+              <text x="286" y="197" fill="#9ca3af" font-size="11">T4</text>
+              <text x="366" y="197" fill="#9ca3af" font-size="11">T5</text>
+              <text x="446" y="197" fill="#9ca3af" font-size="11">T6</text>
+              <text x="355" y="45" fill="#22d3ee" font-size="11">Факт</text>
+              <text x="355" y="62" fill="#a78bfa" font-size="11">Норма</text>
+            </svg>
+            <p class="legend">Пунктир = норматив. Пересечения показывают этапы, где требуется перераспределение ресурсов.</p>
+          </div>
+          <div class="card">
+            <h4>Тепловая карта риска (уровень × подразделение)</h4>
+            <table class="table">
+              <thead><tr><th>Подразделение</th><th>L1</th><th>L2</th><th>L3</th></tr></thead>
+              <tbody>
+                <tr><td>Производство</td><td style="color:#34d399">Низкий</td><td style="color:#f59e0b">Средний</td><td style="color:#f87171">Высокий</td></tr>
+                <tr><td>Логистика</td><td style="color:#34d399">Низкий</td><td style="color:#34d399">Низкий</td><td style="color:#f59e0b">Средний</td></tr>
+                <tr><td>Закупки</td><td style="color:#f59e0b">Средний</td><td style="color:#f87171">Высокий</td><td style="color:#f87171">Высокий</td></tr>
+                <tr><td>Техподдержка</td><td style="color:#34d399">Низкий</td><td style="color:#f59e0b">Средний</td><td style="color:#f59e0b">Средний</td></tr>
+              </tbody>
+            </table>
+            <p class="legend">Риск можно считать из: % просрочки, средний возраст открытых задач, доля возвратов.</p>
+          </div>
+          <div class="card">
+            <h4>Алерты (задачи «под угрозой»)</h4>
+            <table class="table">
+              <thead><tr><th>Задача</th><th>Уровень</th><th>Стадия</th><th>Проблема</th></tr></thead>
+              <tbody>
+                <tr><td>#31459</td><td>L3</td><td>Согласование</td><td>Срок +4 дн</td></tr>
+                <tr><td>#31502</td><td>L2</td><td>В работе</td><td>Нет исполнителя</td></tr>
+                <tr><td>#31744</td><td>L3</td><td>Проверка</td><td>2 возврата</td></tr>
+                <tr><td>#31801</td><td>L1</td><td>Новая</td><td>Блокер данных</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h4>Структура backlog по «возрасту»</h4>
+            <div class="bars">
+              <div class="bar-line"><span>0-2 дня</span><div class="bar-track"><div class="bar-fill" style="width:35%"></div></div><strong>35%</strong></div>
+              <div class="bar-line"><span>3-7 дней</span><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><strong>40%</strong></div>
+              <div class="bar-line"><span>8-14 дней</span><div class="bar-track"><div class="bar-fill" style="width:18%"></div></div><strong>18%</strong></div>
+              <div class="bar-line"><span>15+ дней</span><div class="bar-track"><div class="bar-fill" style="width:7%"></div></div><strong>7%</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Когда выбирать: если ключевая цель — операционный контроль SLA и раннее выявление рисков с ежедневным мониторингом.</p>
+    </section>
 
-      function renderTabButtons() {
-        const node = el("tabButtons");
-        node.innerHTML = "";
-        dashboardTabs.forEach((t, idx) => {
-          const b = document.createElement("button");
-          b.className = `px-3 py-2 rounded-lg text-sm border ${idx === 0 ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 border-slate-300 text-slate-700"}`;
-          b.textContent = t.title;
-          b.addEventListener("click", () => switchTab(t.id, b));
-          node.appendChild(b);
-        });
-      }
+    <!-- Variant 3 -->
+    <section class="tab" id="v3">
+      <div class="a4">
+        <div class="topline">
+          <div>Фокус: баланс нагрузки между L1/L2/L3 и подразделениями</div>
+          <div>Логика: capacity planning и «узкие места» команды</div>
+        </div>
+        <div class="layout">
+          <div class="card kpis">
+            <h4>Баланс потока</h4>
+            <div class="kpi-grid">
+              <div class="kpi"><div class="label">Входящий поток</div><div class="value">+412 / нед</div></div>
+              <div class="kpi"><div class="label">Выходящий поток</div><div class="value">-395 / нед</div></div>
+              <div class="kpi"><div class="label">Net backlog</div><div class="value" style="color:#f59e0b">+17</div></div>
+              <div class="kpi"><div class="label">Utilization</div><div class="value">88%</div></div>
+            </div>
+          </div>
 
-      function switchTab(tabId, btn) {
-        document.querySelectorAll("[data-tab-panel]").forEach((p) => p.classList.toggle("hidden", p.dataset.tabPanel !== tabId));
-        [...el("tabButtons").children].forEach((b) => b.className = "px-3 py-2 rounded-lg text-sm border bg-slate-50 border-slate-300 text-slate-700");
-        btn.className = "px-3 py-2 rounded-lg text-sm border bg-blue-600 text-white border-blue-600";
-      }
+          <div class="card">
+            <h4>Нагрузка по уровням сложности</h4>
+            <svg viewBox="0 0 380 250" width="100%" height="250">
+              <rect x="40" y="110" width="70" height="120" fill="#22d3ee" opacity=".8"/>
+              <rect x="140" y="70" width="70" height="160" fill="#60a5fa" opacity=".85"/>
+              <rect x="240" y="130" width="70" height="100" fill="#a78bfa" opacity=".9"/>
+              <text x="60" y="245" fill="#9ca3af" font-size="12">L1</text>
+              <text x="160" y="245" fill="#9ca3af" font-size="12">L2</text>
+              <text x="260" y="245" fill="#9ca3af" font-size="12">L3</text>
+            </svg>
+            <p class="legend">Сопоставить «кол-во задач» и «доступные FTE» в BI для расчета дефицита мощности.</p>
+          </div>
 
-      function renderMapping(dataset) {
-        const info = el("mappingInfo");
-        const toHtml = (stats, month) => `
-          <div class="mb-2"><span class="font-semibold">${month}</span>: ${stats.reduce((s, x) => s + x.rows, 0)} строк</div>
-          <ul class="list-disc ml-5">${stats.map((s) => `<li>${s.sheetName}: ${s.rows}</li>`).join("")}</ul>`;
-        info.innerHTML = `${toHtml(dataset.prevStats, "Февраль")}${toHtml(dataset.currStats, "Март")}`;
-      }
+          <div class="card">
+            <h4>Топ команд по перегрузке</h4>
+            <div class="bars">
+              <div class="bar-line"><span>Цех №2</span><div class="bar-track"><div class="bar-fill" style="width:92%"></div></div><strong>92%</strong></div>
+              <div class="bar-line"><span>Закупки</span><div class="bar-track"><div class="bar-fill" style="width:84%"></div></div><strong>84%</strong></div>
+              <div class="bar-line"><span>Ремонт</span><div class="bar-track"><div class="bar-fill" style="width:76%"></div></div><strong>76%</strong></div>
+              <div class="bar-line"><span>Логистика</span><div class="bar-track"><div class="bar-fill" style="width:63%"></div></div><strong>63%</strong></div>
+            </div>
+          </div>
 
-      function renderKPI({ prev, curr }) {
-        const prevClosed = prev.filter(isClosed).length;
-        const currClosed = curr.filter(isClosed).length;
-        const prevOver = prev.filter(isOverdue).length;
-        const currOver = curr.filter(isOverdue).length;
+          <div class="card">
+            <h4>Sankey-логика (для BI реализации)</h4>
+            <p class="legend">
+              Источник данных: <strong>Тип задачи → Уровень сложности → Подразделение → Статус закрытия</strong>.<br>
+              На листе BI отрисовать Sankey, чтобы видеть, какие типы работ чаще всего утекают в просрочку и где концентрируется нагрузка.
+            </p>
+            <table class="table">
+              <thead><tr><th>Поток</th><th>Доля</th></tr></thead>
+              <tbody>
+                <tr><td>Инциденты → L2 → Производство → Закрыто</td><td>28%</td></tr>
+                <tr><td>Запросы → L1 → Логистика → Закрыто</td><td>21%</td></tr>
+                <tr><td>Изменения → L3 → Закупки → Просрочка</td><td>14%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Когда выбирать: если нужен инструмент для перераспределения людей/очередей и планирования capacity.</p>
+    </section>
 
-        const prevCycle = prev.map((r) => daysBetween(r.created, r.closed)).filter((x) => x != null);
-        const currCycle = curr.map((r) => daysBetween(r.created, r.closed)).filter((x) => x != null);
-        const avg = (arr) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    <!-- Variant 4 -->
+    <section class="tab" id="v4">
+      <div class="a4">
+        <div class="topline">
+          <div>Фокус: качество процесса и зрелость по подразделениям</div>
+          <div>Логика: «радар + контрольные карты + причины»</div>
+        </div>
+        <div class="layout">
+          <div class="card">
+            <h4>Радар зрелости (Process Health Radar)</h4>
+            <svg class="radar" viewBox="0 0 300 260">
+              <polygon points="150,30 230,70 250,150 200,220 100,220 50,150 70,70" fill="none" stroke="#334155"/>
+              <polygon points="150,60 205,88 220,145 185,196 115,196 80,145 95,88" fill="rgba(34,211,238,.2)" stroke="#22d3ee" stroke-width="2"/>
+              <text x="143" y="20" fill="#9ca3af" font-size="11">SLA</text>
+              <text x="236" y="70" fill="#9ca3af" font-size="11">Качество данных</text>
+              <text x="248" y="154" fill="#9ca3af" font-size="11">Скорость</text>
+              <text x="188" y="236" fill="#9ca3af" font-size="11">Предсказуемость</text>
+              <text x="72" y="236" fill="#9ca3af" font-size="11">Нагрузка</text>
+              <text x="22" y="154" fill="#9ca3af" font-size="11">Возвраты</text>
+              <text x="60" y="70" fill="#9ca3af" font-size="11">Backlog age</text>
+            </svg>
+          </div>
+          <div class="card">
+            <h4>Контрольная карта (стабильность цикла)</h4>
+            <svg viewBox="0 0 520 220" width="100%" height="220">
+              <line x1="30" y1="180" x2="500" y2="180" stroke="#334155"/>
+              <line x1="30" y1="50" x2="500" y2="50" stroke="#f87171" stroke-dasharray="6 6"/>
+              <line x1="30" y1="90" x2="500" y2="90" stroke="#22d3ee" stroke-dasharray="4 4"/>
+              <polyline points="45,120 90,105 135,112 180,95 225,85 270,110 315,82 360,78 405,130 450,88" fill="none" stroke="#a78bfa" stroke-width="3"/>
+            </svg>
+            <p class="legend">UCL/LCL можно считать автоматически: медиана цикла + 1.5*IQR.</p>
+          </div>
+          <div class="card">
+            <h4>Pareto причин просрочки (80/20)</h4>
+            <div class="bars">
+              <div class="bar-line"><span>Ожидание согласования</span><div class="bar-track"><div class="bar-fill" style="width:81%"></div></div><strong>81</strong></div>
+              <div class="bar-line"><span>Не хватает данных</span><div class="bar-track"><div class="bar-fill" style="width:66%"></div></div><strong>66</strong></div>
+              <div class="bar-line"><span>Смена приоритета</span><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><strong>43</strong></div>
+              <div class="bar-line"><span>Зависимость от подрядчика</span><div class="bar-track"><div class="bar-fill" style="width:29%"></div></div><strong>29</strong></div>
+            </div>
+          </div>
+          <div class="card">
+            <h4>Рекомендуемая логика внедрения</h4>
+            <table class="table">
+              <thead><tr><th>Шаг</th><th>Что делаем в BI</th><th>Цель</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>Нормализация статусов из выгрузки</td><td>Единая воронка</td></tr>
+                <tr><td>2</td><td>Сопоставление с уровнями L1/L2/L3</td><td>Сравнимость нагрузок</td></tr>
+                <tr><td>3</td><td>Добавление SLA-метрик и risk-score</td><td>Ранние алерты</td></tr>
+                <tr><td>4</td><td>Сбор «директорского» листа A4</td><td>Еженедельное решение</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Когда выбирать: если цель — управлять качеством процесса, а не только количеством закрытых задач.</p>
+    </section>
 
-        const cards = [
-          metricCard({ title: "Всего задач", value: curr.length, diff: `${((curr.length - prev.length) / Math.max(prev.length, 1) * 100).toFixed(1)}% к февралю`, icon: "fa-list-check", positive: curr.length >= prev.length }),
-          metricCard({ title: "Закрыто", value: currClosed, diff: `${(currClosed / Math.max(curr.length, 1) * 100).toFixed(1)}% от потока`, icon: "fa-circle-check", positive: currClosed >= prevClosed }),
-          metricCard({ title: "Просрочено", value: currOver, diff: `${(currOver / Math.max(curr.length, 1) * 100).toFixed(1)}% от потока`, icon: "fa-triangle-exclamation", positive: currOver <= prevOver }),
-          metricCard({ title: "Средний цикл", value: `${avg(currCycle).toFixed(1)} дн`, diff: `${(avg(currCycle) - avg(prevCycle)).toFixed(1)} дн к февралю`, icon: "fa-clock", positive: avg(currCycle) <= avg(prevCycle) }),
-          metricCard({ title: "Открытый backlog", value: curr.length - currClosed, diff: `${(curr.length - currClosed) - (prev.length - prevClosed)} шт к февралю`, icon: "fa-inbox", positive: (curr.length - currClosed) <= (prev.length - prevClosed) })
-        ];
+    <p class="footnote">
+      Примечание: значения на графиках демонстрационные (MVP-плейсхолдеры). Для боевого BI подставьте реальные поля из февральского/мартовского файла и скана выгрузки
+      (например: дата создания, дата закрытия, уровень L1/L2/L3, подразделение, причина возврата, статус SLA).
+    </p>
+  </div>
 
-        el("kpi-grid").innerHTML = cards.join("");
-      }
+  <script>
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabs = document.querySelectorAll('.tab');
 
-      function renderV1({ curr }) {
-        const statusMap = topN(groupCount(curr, (r) => r.status || "Не указан"), 8);
-        destroyChart("statusFunnelChart");
-        charts.statusFunnelChart = new Chart(el("statusFunnelChart"), {
-          type: "bar",
-          data: {
-            labels: statusMap.map((x) => x[0]),
-            datasets: [{ label: "Задач", data: statusMap.map((x) => x[1]), backgroundColor: ["#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe", "#eff6ff"], borderRadius: 8 }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { grid: { color: "#e2e8f0" } }, y: { grid: { display: false } } } }
-        });
-
-        const levels = ["L1", "L2", "L3", "L?"];
-        const levelData = levels.map((lv) => curr.filter((r) => r.level === lv).length);
-        destroyChart("levelSplitChart");
-        charts.levelSplitChart = new Chart(el("levelSplitChart"), {
-          type: "doughnut",
-          data: { labels: levels, datasets: [{ data: levelData, backgroundColor: ["#2563eb", "#0ea5e9", "#8b5cf6", "#94a3b8"] }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
-        });
-
-        const top = topN(groupCount(curr, (r) => r.direction), 10);
-        el("topDirectionsTable").innerHTML = `
-          <thead><tr class="text-left text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Направление</th><th class="py-2 pr-3">Всего</th><th class="py-2">Просрочено</th></tr></thead>
-          <tbody>${top.map(([d, n]) => {
-            const over = curr.filter((r) => r.direction === d && isOverdue(r)).length;
-            return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 font-medium">${d}</td><td class="py-2 pr-3">${n}</td><td class="py-2">${over}</td></tr>`;
-          }).join("")}</tbody>`;
-      }
-
-      function renderV2({ curr }) {
-        const levels = ["L1", "L2", "L3"];
-        const norms = [2, 5, 10];
-        const fact = levels.map((lv) => {
-          const arr = curr.filter((r) => r.level === lv).map((r) => daysBetween(r.created, r.closed)).filter((x) => x != null);
-          return arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : 0;
-        });
-
-        destroyChart("slaChart");
-        charts.slaChart = new Chart(el("slaChart"), {
-          type: "bar",
-          data: {
-            labels: levels,
-            datasets: [
-              { label: "Факт (дни)", data: fact, backgroundColor: "#0ea5e9", borderRadius: 8 },
-              { label: "Норма", data: norms, type: "line", borderColor: "#ef4444", borderDash: [6, 6], borderWidth: 2, pointRadius: 3 }
-            ]
-          },
-          options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: "#e2e8f0" } } } }
-        });
-
-        const buckets = { "0-2": 0, "3-7": 0, "8-14": 0, "15+": 0 };
-        curr.forEach((r) => {
-          if (isClosed(r) || !r.created) return;
-          const age = daysBetween(r.created, new Date());
-          if (age <= 2) buckets["0-2"]++;
-          else if (age <= 7) buckets["3-7"]++;
-          else if (age <= 14) buckets["8-14"]++;
-          else buckets["15+"]++;
-        });
-        destroyChart("ageBucketChart");
-        charts.ageBucketChart = new Chart(el("ageBucketChart"), {
-          type: "bar",
-          data: { labels: Object.keys(buckets), datasets: [{ label: "Открытые задачи", data: Object.values(buckets), backgroundColor: "#2563eb", borderRadius: 8 }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: "#e2e8f0" } }, x: { grid: { display: false } } } }
-        });
-
-        const alerts = curr
-          .filter((r) => !isClosed(r) && r.deadline)
-          .map((r) => ({ ...r, overdueDays: daysBetween(r.deadline, new Date()) }))
-          .filter((r) => r.overdueDays > 0)
-          .sort((a, b) => b.overdueDays - a.overdueDays)
-          .slice(0, 12);
-
-        el("alertsBody").innerHTML = alerts.map((a) => `
-          <tr class="border-b border-slate-100 hover:bg-slate-50">
-            <td class="py-3 pr-3 font-medium text-slate-700">${a.title || a.id}</td>
-            <td class="py-3 pr-3">${a.owner}</td>
-            <td class="py-3 pr-3">${a.direction}</td>
-            <td class="py-3"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">+${a.overdueDays} дн</span></td>
-          </tr>`).join("") || `<tr><td colspan="4" class="py-4 text-slate-500">Просроченных открытых задач не найдено.</td></tr>`;
-      }
-
-      function renderV3({ prev, curr }) {
-        const openCurr = curr.filter((r) => !isClosed(r));
-        const workload = topN(groupCount(openCurr, (r) => r.direction), 10);
-
-        destroyChart("workloadChart");
-        charts.workloadChart = new Chart(el("workloadChart"), {
-          type: "bar",
-          data: { labels: workload.map((x) => x[0]), datasets: [{ label: "Открытые", data: workload.map((x) => x[1]), backgroundColor: "#1d4ed8", borderRadius: 8 }] },
-          options: { responsive: true, maintainAspectRatio: false, indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: "#e2e8f0" } }, y: { grid: { display: false } } } }
-        });
-
-        const prevMap = groupCount(prev, (r) => r.direction);
-        const currMap = groupCount(curr, (r) => r.direction);
-        const dirs = [...new Set([...prevMap.keys(), ...currMap.keys()])];
-        const delta = dirs.map((d) => ({ d, diff: (currMap.get(d) || 0) - (prevMap.get(d) || 0) }));
-        const topDelta = delta.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)).slice(0, 10);
-
-        destroyChart("deltaChart");
-        charts.deltaChart = new Chart(el("deltaChart"), {
-          type: "bar",
-          data: {
-            labels: topDelta.map((x) => x.d),
-            datasets: [{ label: "Δ задач", data: topDelta.map((x) => x.diff), backgroundColor: topDelta.map((x) => x.diff >= 0 ? "#0ea5e9" : "#ef4444"), borderRadius: 8 }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: "#e2e8f0" } }, x: { grid: { display: false } } } }
-        });
-
-        const levels = ["L1", "L2", "L3"];
-        const dirsTop = topN(groupCount(curr, (r) => r.direction), 8).map((x) => x[0]);
-
-        const head = `<thead><tr class="bg-slate-50 text-slate-600 border-b border-slate-200"><th class="text-left py-2 px-3">Направление</th>${levels.map((l) => `<th class="py-2 px-3">${l}</th>`).join("")}<th class="py-2 px-3">Итого</th><th class="py-2 px-3">Просрочка %</th></tr></thead>`;
-        const body = dirsTop.map((d) => {
-          const rows = curr.filter((r) => r.direction === d);
-          const lv = levels.map((l) => rows.filter((r) => r.level === l).length);
-          const total = rows.length;
-          const overdue = rows.filter(isOverdue).length;
-          return `<tr class="border-b border-slate-100"><td class="py-2 px-3 font-medium">${d}</td>${lv.map((v) => `<td class="py-2 px-3 text-center ${v === 0 ? "bg-rose-500 text-white" : v >= 10 ? "bg-emerald-100" : "bg-amber-100"}">${v}</td>`).join("")}<td class="py-2 px-3 text-center font-semibold">${total}</td><td class="py-2 px-3 text-center">${(overdue / Math.max(total,1) * 100).toFixed(1)}%</td></tr>`;
-        }).join("");
-        el("pipelineTable").innerHTML = `${head}<tbody>${body}</tbody>`;
-      }
-
-      function renderV4({ curr }) {
-        const reasonMap = topN(groupCount(curr.filter((r) => isOverdue(r) || /возврат/i.test(r.reason)).map((r) => ({ ...r, reason: r.reason || "Не указана" })), (r) => r.reason), 8);
-        destroyChart("reasonChart");
-        charts.reasonChart = new Chart(el("reasonChart"), {
-          type: "doughnut",
-          data: { labels: reasonMap.map((x) => x[0]), datasets: [{ data: reasonMap.map((x) => x[1]), backgroundColor: ["#2563eb", "#f59e0b", "#ef4444", "#10b981", "#8b5cf6", "#0ea5e9", "#64748b", "#14b8a6"] }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
-        });
-
-        const weekMap = new Map();
-        curr.forEach((r) => {
-          if (!isClosed(r) || !r.closed) return;
-          const dt = new Date(r.closed);
-          const start = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7)));
-          const key = start.toISOString().slice(0, 10);
-          weekMap.set(key, (weekMap.get(key) || 0) + 1);
-        });
-        const weeks = [...weekMap.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-
-        destroyChart("weeklyCloseChart");
-        charts.weeklyCloseChart = new Chart(el("weeklyCloseChart"), {
-          type: "line",
-          data: { labels: weeks.map((x) => x[0]), datasets: [{ label: "Закрыто за неделю", data: weeks.map((x) => x[1]), borderColor: "#0ea5e9", backgroundColor: "rgba(14,165,233,0.2)", fill: true, tension: 0.3, pointRadius: 3 }] },
-          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: "#e2e8f0" } }, x: { grid: { display: false } } } }
-        });
-
-        const owners = topN(groupCount(curr, (r) => r.owner), 15);
-        el("ownerTable").innerHTML = `
-          <thead><tr class="text-left text-slate-500 border-b border-slate-200"><th class="py-2 pr-3">Ответственный</th><th class="py-2 pr-3">Всего задач</th><th class="py-2 pr-3">Закрыто</th><th class="py-2">Просрочка %</th></tr></thead>
-          <tbody>${owners.map(([owner, total]) => {
-            const rows = curr.filter((r) => r.owner === owner);
-            const closed = rows.filter(isClosed).length;
-            const overdue = rows.filter(isOverdue).length;
-            return `<tr class="border-b border-slate-100"><td class="py-2 pr-3 font-medium">${owner}</td><td class="py-2 pr-3">${total}</td><td class="py-2 pr-3">${closed}</td><td class="py-2">${(overdue / Math.max(total,1) * 100).toFixed(1)}%</td></tr>`;
-          }).join("")}</tbody>`;
-      }
-
-      el("reloadBtn").addEventListener("click", loadData);
-      loadData();
-    </script>
-  </body>
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabs.forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+  </script>
+</body>
 </html>
