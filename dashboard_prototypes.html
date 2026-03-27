@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Задачи сотрудников производства — февраль и март</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      --bg:#f1f5f9; --card:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --blue:#2563eb; --blue2:#0ea5e9; --green:#10b981; --orange:#f59e0b; --red:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .container{max-width:1280px;margin:0 auto;padding:14px}
+    .header{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .title{margin:0;font-size:24px}
+    .sub{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .chip{font-size:12px;padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:#fff}
+    .ok{background:#dcfce7;color:#166534}.warn{background:#fee2e2;color:#991b1b}.load{background:#fef3c7;color:#92400e}
+    .row{display:grid;gap:12px;margin-top:12px}
+    .kpi{grid-template-columns:repeat(5,minmax(0,1fr))}
+    .cards2{grid-template-columns:1.1fr 1fr}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;overflow:hidden}
+    .card h3{margin:0 0 8px;font-size:16px}
+    .k{font-size:12px;color:var(--muted)} .v{font-size:22px;font-weight:700}
+    .d{font-size:12px;font-weight:700}
+    .d.up{color:var(--green)} .d.down{color:var(--red)}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tabbtn{border:1px solid var(--line);background:#fff;color:#334155;padding:9px 12px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
+    .tabbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .panel{display:none}.panel.active{display:block}
+    .chart{height:220px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{padding:7px;border-bottom:1px solid var(--line);text-align:left}
+    th{color:#475569;font-weight:600}
+    .meta{font-size:12px;color:var(--muted);line-height:1.4}
+    @media(max-width:1024px){.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.cards2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1 class="title">Задачи сотрудников производства</h1>
+        <p class="sub">Сравнение февраля и марта по вашим выгрузкам из Б24 (все листы в Excel учитываются)</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span id="state" class="chip load">Читаю файлы…</span>
+        <button id="reload" class="tabbtn">Обновить данные</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="tabs" id="tabs"></div>
+      <p class="meta" id="sources" style="margin:10px 0 0"></p>
+    </div>
+
+    <div class="row kpi" id="kpi"></div>
+
+    <section class="panel active" data-panel="p1">
+      <div class="row cards2">
+        <article class="card"><h3>Как распределены задачи по состояниям (март)</h3><div class="chart"><canvas id="cState"></canvas></div></article>
+        <article class="card"><h3>Распределение по уровням сложности (март)</h3><div class="chart"><canvas id="cLevel"></canvas></div></article>
+      </div>
+      <article class="card" style="margin-top:12px"><h3>Подразделения с самым большим количеством задач (март)</h3><table id="tDept"></table></article>
+    </section>
+
+    <section class="panel" data-panel="p2">
+      <div class="row cards2">
+        <article class="card"><h3>Средняя длительность выполнения по уровням</h3><div class="chart"><canvas id="cTime"></canvas></div></article>
+        <article class="card"><h3>Сколько открытых задач по возрасту (март)</h3><div class="chart"><canvas id="cAge"></canvas></div></article>
+      </div>
+      <article class="card" style="margin-top:12px"><h3>Задачи с наибольшей просрочкой</h3><table id="tRisk"></table></article>
+    </section>
+
+    <section class="panel" data-panel="p3">
+      <div class="row cards2">
+        <article class="card"><h3>Нагрузка по подразделениям (только открытые, март)</h3><div class="chart"><canvas id="cLoad"></canvas></div></article>
+        <article class="card"><h3>Изменение объёма работ: февраль → март</h3><div class="chart"><canvas id="cDiff"></canvas></div></article>
+      </div>
+      <article class="card" style="margin-top:12px"><h3>Матрица нагрузки (подразделение × уровень)</h3><table id="tMatrix"></table></article>
+    </section>
+
+    <section class="panel" data-panel="p4">
+      <div class="row cards2">
+        <article class="card"><h3>Основные причины задержек/возвратов</h3><div class="chart"><canvas id="cReason"></canvas></div></article>
+        <article class="card"><h3>Закрыто задач по неделям (март)</h3><div class="chart"><canvas id="cWeek"></canvas></div></article>
+      </div>
+      <article class="card" style="margin-top:12px"><h3>Сводка по ответственным</h3><table id="tOwner"></table></article>
+    </section>
+  </div>
+
+<script>
+const FILES={prev:'directions_report_prev_month_2026_02.xlsx',curr:'directions_report_current_month_2026_03.xlsx'};
+const tabs=[['p1','Общая картина'],['p2','Сроки и просрочки'],['p3','Нагрузка'],['p4','Качество исполнения']];
+const cols={
+  title:['название','тема','заголовок','задача','name'],
+  created:['дата создания','создан','created'],
+  closed:['дата закрытия','закрыт','заверш'],
+  deadline:['срок','дедлайн','deadline','плановая дата'],
+  status:['статус','состояние','этап'],
+  level:['уровень','сложность','l1','l2','l3'],
+  dept:['подразделение','направление','отдел','департамент'],
+  owner:['ответственный','исполнитель','менеджер'],
+  reason:['причина','комментарий','возврат']
+};
+const charts={};
+const E=id=>document.getElementById(id);
+const N=v=>String(v??'').toLowerCase().trim();
+function pick(headers,key){for(const h of headers){if(cols[key].some(c=>N(h).includes(c)))return h;}return null;}
+function date(v){if(v==null||v==='')return null;if(typeof v==='number'){const d=XLSX.SSF.parse_date_code(v);return d?new Date(Date.UTC(d.y,d.m-1,d.d)):null;}const s=String(v).replace(/\./g,'-').replace(/\//g,'-');const dt=new Date(s);return isNaN(dt)?null:dt;}
+function days(a,b){return (!a||!b)?null:Math.round((b-a)/86400000);}
+function closed(r){return !!r.closed || /закры|выполн/i.test(r.status);}
+function overdue(r){if(!r.deadline)return false; if(closed(r)&&r.closed)return r.closed>r.deadline; return !closed(r)&&new Date()>r.deadline;}
+function grp(rows,key){const m=new Map();rows.forEach(r=>m.set(key(r),(m.get(key(r))||0)+1));return m;}
+function top(map,n=8){return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n);}
+function dChart(id){if(charts[id])charts[id].destroy();}
+
+function parseBook(bin,month){const wb=XLSX.read(bin,{type:'array'});const all=[];const stats=[];
+  wb.SheetNames.forEach(name=>{const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{defval:null});if(!rows.length)return;
+    const h=Object.keys(rows[0]);const map={title:pick(h,'title'),created:pick(h,'created'),closed:pick(h,'closed'),deadline:pick(h,'deadline'),status:pick(h,'status'),level:pick(h,'level'),dept:pick(h,'dept'),owner:pick(h,'owner'),reason:pick(h,'reason')};
+    rows.forEach((r,i)=>{const levelRaw=map.level?String(r[map.level]??''):'';const lv=(levelRaw.match(/L[1-3]/i)?.[0]||'Не указан').toUpperCase().replace('L','Уровень ');
+      all.push({month,sheet:name,title:map.title?String(r[map.title]??`Задача ${i+1}`):`Задача ${i+1}`,created:date(map.created?r[map.created]:null),closed:date(map.closed?r[map.closed]:null),deadline:date(map.deadline?r[map.deadline]:null),status:map.status?String(r[map.status]??''): (date(map.closed?r[map.closed]:null)?'Закрыта':'В работе'),level:lv,dept:map.dept?String(r[map.dept]??'Не указано'):'Не указано',owner:map.owner?String(r[map.owner]??'Не указан'):'Не указан',reason:map.reason?String(r[map.reason]??''):''});
+    });
+    stats.push({name,count:rows.length});
+  });
+  return {rows:all,stats};
+}
+
+function demo(){const depts=['Цех 1','Цех 2','Логистика','Склад','Ремонт'];const owners=['Иванов','Петров','Сидоров','Кузнецов'];const out=[];
+  for(let m of ['02','03']) for(let i=1;i<=150;i++){const cr=new Date(`2026-${m}-${String((i%27)+1).padStart(2,'0')}`);const done=i%4!==0;const cl=done?new Date(cr.getTime()+((i%10)+1)*86400000):null;const dl=new Date(cr.getTime()+((i%7)+2)*86400000);const st=done?(cl>dl?'Просрочена':'Закрыта'):'В работе';
+    out.push({month:`2026-${m}`,sheet:'Лист 1',title:`Задача ${i}`,created:cr,closed:cl,deadline:dl,status:st,level:`Уровень ${(i%3)+1}`,dept:depts[i%depts.length],owner:owners[i%owners.length],reason:st==='Просрочена'?['Нет данных','Ожидание согласования','Смена приоритета'][i%3]:''});}
+  return {prev:out.filter(x=>x.month==='2026-02'),curr:out.filter(x=>x.month==='2026-03'),prevStats:[{name:'Лист 1',count:150}],currStats:[{name:'Лист 1',count:150}]};
+}
+
+function card(name,val,diff,good=true){return `<article class="card"><div class="k">${name}</div><div class="v">${val}</div><div class="d ${good?'up':'down'}">${diff}</div></article>`;}
+
+function render(data){
+  const {prev,curr,prevStats,currStats}=data;
+  E('sources').innerHTML=`Файлы: <b>${FILES.prev}</b> и <b>${FILES.curr}</b>. Прочитано строк: февраль — ${prev.length}, март — ${curr.length}. Листы: февраль (${prevStats.map(x=>`${x.name}: ${x.count}`).join(', ')}), март (${currStats.map(x=>`${x.name}: ${x.count}`).join(', ')}).`;
+
+  const pClosed=prev.filter(closed).length,cClosed=curr.filter(closed).length,pOver=prev.filter(overdue).length,cOver=curr.filter(overdue).length;
+  const pDur=prev.map(r=>days(r.created,r.closed)).filter(v=>v!=null),cDur=curr.map(r=>days(r.created,r.closed)).filter(v=>v!=null),avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
+  E('kpi').innerHTML=[
+    card('Всего задач в марте',curr.length,`${((curr.length-prev.length)/Math.max(prev.length,1)*100).toFixed(1)}% к февралю`,curr.length>=prev.length),
+    card('Закрыто задач',cClosed,`${(cClosed/Math.max(curr.length,1)*100).toFixed(1)}% от всех`,cClosed>=pClosed),
+    card('Просрочено задач',cOver,`${(cOver/Math.max(curr.length,1)*100).toFixed(1)}% от всех`,cOver<=pOver),
+    card('Средняя длительность',`${avg(cDur).toFixed(1)} дн`,`${(avg(cDur)-avg(pDur)).toFixed(1)} дн к февралю`,avg(cDur)<=avg(pDur)),
+    card('Открыто на конец периода',curr.length-cClosed,`${(curr.length-cClosed)-(prev.length-pClosed)} шт к февралю`,(curr.length-cClosed)<=(prev.length-pClosed))
+  ].join('');
+
+  const st=top(grp(curr,r=>r.status||'Не указан'),8); dChart('cState'); charts.cState=new Chart(E('cState'),{type:'bar',data:{labels:st.map(x=>x[0]),datasets:[{data:st.map(x=>x[1]),backgroundColor:'#2563eb',borderRadius:8}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#e2e8f0'}},y:{grid:{display:false}}}}});
+  const lv=['Уровень 1','Уровень 2','Уровень 3','НЕ УКАЗАН']; dChart('cLevel'); charts.cLevel=new Chart(E('cLevel'),{type:'doughnut',data:{labels:lv,datasets:[{data:lv.map(l=>curr.filter(r=>r.level===l).length),backgroundColor:['#2563eb','#0ea5e9','#8b5cf6','#94a3b8']}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+
+  const td=top(grp(curr,r=>r.dept),8); E('tDept').innerHTML=`<thead><tr><th>Подразделение</th><th>Всего</th><th>Просрочено</th></tr></thead><tbody>${td.map(([d,n])=>`<tr><td>${d}</td><td>${n}</td><td>${curr.filter(r=>r.dept===d&&overdue(r)).length}</td></tr>`).join('')}</tbody>`;
+
+  const levels=['Уровень 1','Уровень 2','Уровень 3'],norm=[2,5,10],fact=levels.map(l=>{const a=curr.filter(r=>r.level===l).map(r=>days(r.created,r.closed)).filter(x=>x!=null);return a.length?+(a.reduce((s,x)=>s+x,0)/a.length).toFixed(1):0;});
+  dChart('cTime'); charts.cTime=new Chart(E('cTime'),{type:'bar',data:{labels:levels,datasets:[{label:'Фактическая длительность, дни',data:fact,backgroundColor:'#0ea5e9',borderRadius:8},{label:'Плановая длительность, дни',data:norm,type:'line',borderColor:'#ef4444',borderDash:[6,6],pointRadius:3}]},options:{maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#e2e8f0'}}}}});
+
+  const b={'0–2 дня':0,'3–7 дней':0,'8–14 дней':0,'15+ дней':0}; curr.forEach(r=>{if(closed(r)||!r.created)return;const a=days(r.created,new Date());if(a<=2)b['0–2 дня']++; else if(a<=7)b['3–7 дней']++; else if(a<=14)b['8–14 дней']++; else b['15+ дней']++;});
+  dChart('cAge'); charts.cAge=new Chart(E('cAge'),{type:'bar',data:{labels:Object.keys(b),datasets:[{data:Object.values(b),backgroundColor:'#2563eb',borderRadius:8}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#e2e8f0'}},x:{grid:{display:false}}}}});
+
+  const risk=curr.filter(r=>!closed(r)&&r.deadline).map(r=>({...r,late:days(r.deadline,new Date())})).filter(r=>r.late>0).sort((a,b)=>b.late-a.late).slice(0,10);
+  E('tRisk').innerHTML=`<thead><tr><th>Задача</th><th>Ответственный</th><th>Подразделение</th><th>Просрочка</th></tr></thead><tbody>${risk.map(r=>`<tr><td>${r.title}</td><td>${r.owner}</td><td>${r.dept}</td><td>+${r.late} дн</td></tr>`).join('')||'<tr><td colspan="4">Сильных просрочек не найдено</td></tr>'}</tbody>`;
+
+  const open=curr.filter(r=>!closed(r)); const load=top(grp(open,r=>r.dept),10); dChart('cLoad'); charts.cLoad=new Chart(E('cLoad'),{type:'bar',data:{labels:load.map(x=>x[0]),datasets:[{data:load.map(x=>x[1]),backgroundColor:'#1d4ed8',borderRadius:8}]},options:{maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'#e2e8f0'}},y:{grid:{display:false}}}}});
+
+  const pm=grp(prev,r=>r.dept),cm=grp(curr,r=>r.dept),deps=[...new Set([...pm.keys(),...cm.keys()])],diff=deps.map(d=>({d,v:(cm.get(d)||0)-(pm.get(d)||0)})).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v)).slice(0,10);
+  dChart('cDiff'); charts.cDiff=new Chart(E('cDiff'),{type:'bar',data:{labels:diff.map(x=>x.d),datasets:[{data:diff.map(x=>x.v),backgroundColor:diff.map(x=>x.v>=0?'#0ea5e9':'#ef4444'),borderRadius:8}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#e2e8f0'}},x:{grid:{display:false}}}}});
+
+  const topDep=top(grp(curr,r=>r.dept),8).map(x=>x[0]); E('tMatrix').innerHTML=`<thead><tr><th>Подразделение</th><th>Уровень 1</th><th>Уровень 2</th><th>Уровень 3</th><th>Всего</th><th>Просрочка %</th></tr></thead><tbody>${topDep.map(d=>{const r=curr.filter(x=>x.dept===d),a=r.filter(x=>x.level==='Уровень 1').length,b=r.filter(x=>x.level==='Уровень 2').length,c=r.filter(x=>x.level==='Уровень 3').length,o=r.filter(overdue).length;return `<tr><td>${d}</td><td>${a}</td><td>${b}</td><td>${c}</td><td>${r.length}</td><td>${(o/Math.max(r.length,1)*100).toFixed(1)}%</td></tr>`;}).join('')}</tbody>`;
+
+  const rs=top(grp(curr.filter(r=>overdue(r)||/возврат/i.test(r.reason)).map(r=>({...r,reason:r.reason||'Причина не указана'}),),r=>r.reason),8);
+  dChart('cReason'); charts.cReason=new Chart(E('cReason'),{type:'doughnut',data:{labels:rs.map(x=>x[0]),datasets:[{data:rs.map(x=>x[1]),backgroundColor:['#2563eb','#f59e0b','#ef4444','#10b981','#8b5cf6','#0ea5e9','#64748b','#14b8a6']}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+
+  const wm=new Map(); curr.forEach(r=>{if(!closed(r)||!r.closed)return;const d=new Date(r.closed);const w=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-((d.getUTCDay()+6)%7))).toISOString().slice(0,10);wm.set(w,(wm.get(w)||0)+1);});
+  const ww=[...wm.entries()].sort((a,b)=>a[0].localeCompare(b[0])); dChart('cWeek'); charts.cWeek=new Chart(E('cWeek'),{type:'line',data:{labels:ww.map(x=>x[0]),datasets:[{data:ww.map(x=>x[1]),label:'Закрыто задач',borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.2)',fill:true,tension:.3,pointRadius:3}]},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid:{color:'#e2e8f0'}},x:{grid:{display:false}}}}});
+
+  const own=top(grp(curr,r=>r.owner),12); E('tOwner').innerHTML=`<thead><tr><th>Ответственный</th><th>Всего задач</th><th>Закрыто</th><th>Просрочка %</th></tr></thead><tbody>${own.map(([o,n])=>{const r=curr.filter(x=>x.owner===o),cl=r.filter(closed).length,ov=r.filter(overdue).length;return `<tr><td>${o}</td><td>${n}</td><td>${cl}</td><td>${(ov/Math.max(n,1)*100).toFixed(1)}%</td></tr>`;}).join('')}</tbody>`;
+}
+
+async function load(){const s=E('state');s.className='chip load';s.textContent='Читаю файлы…';
+  try{const [a,b]=await Promise.all([fetch(FILES.prev),fetch(FILES.curr)]); if(!a.ok||!b.ok) throw new Error('not found');
+    const [ab,bb]=await Promise.all([a.arrayBuffer(),b.arrayBuffer()]);
+    const prev=parseBook(ab,'2026-02'),curr=parseBook(bb,'2026-03');
+    render({prev:prev.rows,curr:curr.rows,prevStats:prev.stats,currStats:curr.stats});
+    s.className='chip ok'; s.textContent='Взяты реальные данные из Excel';
+  }catch(e){render(demo()); s.className='chip warn'; s.textContent='Файлы не найдены рядом с HTML: показан демонстрационный режим';}
+}
+
+function initTabs(){const t=E('tabs');t.innerHTML='';tabs.forEach((x,i)=>{const b=document.createElement('button');b.className='tabbtn'+(i===0?' active':'');b.textContent=x[1];b.onclick=()=>{document.querySelectorAll('.tabbtn').forEach(n=>n.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===x[0]));};t.appendChild(b);});}
+E('reload').addEventListener('click',load);initTabs();load();
+</script>
+</body>
+</html>
