@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<<<<<<< codex/design-interactive-charts-with-white-background-hvng5f
+  <title>Аналитика Администрирование</title>
+=======
   <title>Панель задач подразделений</title>
+>>>>>>> main
   <style>
     :root {
       --bg: #ffffff;
@@ -27,6 +31,27 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       height: 100vh;
       overflow: hidden;
+<<<<<<< codex/design-interactive-charts-with-white-background-hvng5f
+      padding: 12px;
+    }
+
+    .board {
+      height: calc(100vh - 24px);
+      max-width: 1540px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      gap: 10px;
+    }
+
+    .head, .filters, .kpis, .content { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+
+    .head { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
+    .head h1 { margin: 0; font-size: 30px; line-height: 1.05; font-weight: 700; }
+    .head p { margin: 6px 0 0; color: var(--muted); font-size: 16px; }
+
+    .filters { padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-size: 17px; }
+=======
       padding: 10px;
     }
 
@@ -46,16 +71,32 @@
     .head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 
     .filters { padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+>>>>>>> main
     .month-btn {
       border: 1px solid #b8cdf3;
       background: #fff;
       color: #245fbf;
+<<<<<<< codex/design-interactive-charts-with-white-background-hvng5f
+      padding: 10px 18px;
+      border-radius: 20px;
+=======
       padding: 7px 12px;
       border-radius: 18px;
+>>>>>>> main
       cursor: pointer;
       font-weight: 600;
+      font-size: 16px;
     }
     .month-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+<<<<<<< codex/design-interactive-charts-with-white-background-hvng5f
+    .note { margin-left: auto; color: var(--muted); font-size: 14px; }
+
+    .kpis { padding: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+    .kpi .label { color: var(--muted); font-size: 14px; }
+    .kpi .val { font-size: 30px; font-weight: 700; margin-top: 4px; }
+    .kpi .delta { font-size: 13px; margin-top: 4px; }
+=======
     .note { margin-left: auto; color: var(--muted); font-size: 12px; }
 
     .kpis { padding: 8px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
@@ -63,10 +104,39 @@
     .kpi .label { color: var(--muted); font-size: 12px; }
     .kpi .val { font-size: 24px; font-weight: 700; margin-top: 4px; }
     .kpi .delta { font-size: 12px; margin-top: 2px; }
+>>>>>>> main
     .good { color: var(--green); }
     .bad { color: var(--red); }
 
     .content {
+<<<<<<< codex/design-interactive-charts-with-white-background-hvng5f
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 10px;
+      min-height: 0;
+      align-items: stretch;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+    .card h3 { margin: 0 0 10px; font-size: 18px; }
+
+    .stack { display: grid; gap: 8px; align-content: end; }
+    .bar-line { display: grid; grid-template-columns: minmax(140px, 1fr) 2.4fr 72px; align-items: center; gap: 10px; font-size: 14px; }
+    .track { height: 12px; background: #edf2f9; border-radius: 999px; overflow: hidden; }
+    .fill { height: 100%; border-radius: 999px; }
+
+    .flow { display: grid; gap: 12px; align-content: end; }
+    .flow-row { display: grid; grid-template-columns: 160px 1fr; gap: 10px; align-items: center; font-size: 14px; }
+    .flow-track { height: 19px; border-radius: 999px; background: #edf2f9; overflow: hidden; display: flex; }
+=======
       padding: 8px;
       display: grid;
       grid-template-columns: 1.2fr 1fr 1fr;
@@ -93,15 +163,23 @@
     .flow { display: grid; gap: 10px; align-content: end; }
     .flow-row { display: grid; grid-template-columns: 130px 1fr; gap: 8px; align-items: center; font-size: 12px; }
     .flow-track { height: 16px; border-radius: 999px; background: #edf2f9; overflow: hidden; display: flex; }
+>>>>>>> main
     .seg-done { background: var(--green); }
     .seg-late { background: var(--red); }
     .seg-move { background: var(--orange); }
     .seg-rest { background: #c7d3e6; }
 
+<<<<<<< codex/design-interactive-charts-with-white-background-hvng5f
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 7px 6px; border-bottom: 1px solid #e6edf7; text-align: left; }
+    th { color: #335c9b; font-size: 14px; }
+    .mini { color: var(--muted); font-size: 13px; }
+=======
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { padding: 5px 4px; border-bottom: 1px solid #e6edf7; text-align: left; }
     th { color: #335c9b; }
     .mini { color: var(--muted); font-size: 11px; }
+>>>>>>> main
 
     @media (max-width: 1200px) {
       body { overflow: auto; }
@@ -115,7 +193,11 @@
   <div class="board">
     <div class="head">
       <div>
+<<<<<<< codex/design-interactive-charts-with-white-background-hvng5f
+        <h1>Аналитика Администрирование</h1>
+=======
         <h1>Панель задач подразделений</h1>
+>>>>>>> main
         <p>Оформление в светлом стиле под Битрикс24. Данные взяты из отчетов за февраль и март 2026 года.</p>
       </div>
     </div>
