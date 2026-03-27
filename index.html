@@ -3,432 +3,353 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>B24 · Прототипы A4 дашборда</title>
+  <title>Аналитика Администрирование</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --card: #1f2937;
-      --card-2: #243244;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --accent: #22d3ee;
-      --accent-2: #a78bfa;
-      --good: #34d399;
-      --warn: #f59e0b;
-      --bad: #f87171;
-      --border: #334155;
+      --bg: #ffffff;
+      --panel: #f7f9fc;
+      --card: #ffffff;
+      --text: #1f2b3d;
+      --muted: #6b778c;
+      --line: #d9e2ef;
+      --blue: #2f7cf6;
+      --blue-soft: #eaf2ff;
+      --green: #2ba86b;
+      --red: #d64545;
+      --orange: #f0a020;
     }
 
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
-      background: radial-gradient(circle at 20% 0%, #16213a 0%, var(--bg) 45%);
+      background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
-      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      padding: 12px;
     }
 
-    .wrap { max-width: 1320px; margin: 0 auto; }
-
-    .head {
-      display: flex;
-      justify-content: space-between;
-      align-items: end;
-      gap: 16px;
-      margin-bottom: 14px;
-    }
-    .title { font-size: 28px; margin: 0 0 6px; }
-    .subtitle { margin: 0; color: var(--muted); }
-
-    .tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 14px;
+    .board {
+      height: calc(100vh - 24px);
+      max-width: 1540px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      gap: 10px;
     }
 
-    .tab-btn {
-      border: 1px solid var(--border);
-      background: #0b1220;
-      color: var(--text);
-      padding: 10px 14px;
-      border-radius: 10px;
+    .head, .filters, .kpis, .content { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+
+    .head { padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
+    .head h1 { margin: 0; font-size: 30px; line-height: 1.05; font-weight: 700; }
+    .head p { margin: 6px 0 0; color: var(--muted); font-size: 16px; }
+
+    .filters { padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-size: 17px; }
+    .month-btn {
+      border: 1px solid #b8cdf3;
+      background: #fff;
+      color: #245fbf;
+      padding: 10px 18px;
+      border-radius: 20px;
       cursor: pointer;
       font-weight: 600;
+      font-size: 16px;
     }
-    .tab-btn.active {
-      background: linear-gradient(135deg, #0f3a49, #1f2d4a);
-      border-color: #3b82f6;
-      color: #dbeafe;
-    }
+    .month-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .note { margin-left: auto; color: var(--muted); font-size: 14px; }
 
-    .tab {
-      display: none;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: linear-gradient(160deg, var(--panel), #0b1220 70%);
-      padding: 12px;
-    }
-    .tab.active { display: block; }
+    .kpis { padding: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+    .kpi .label { color: var(--muted); font-size: 14px; }
+    .kpi .val { font-size: 30px; font-weight: 700; margin-top: 4px; }
+    .kpi .delta { font-size: 13px; margin-top: 4px; }
+    .good { color: var(--green); }
+    .bad { color: var(--red); }
 
-    /* A4 landscape area */
-    .a4 {
-      width: 100%;
-      aspect-ratio: 1.414/1;
-      background: linear-gradient(145deg, #0f172a, #121826);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+    .content {
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1.05fr 1.05fr 0.9fr;
+      grid-template-rows: 0.62fr 0.38fr;
+      gap: 10px;
+      min-height: 0;
+      align-items: stretch;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
       padding: 12px;
       display: grid;
-      gap: 10px;
       grid-template-rows: auto 1fr;
-    }
-
-    .topline {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px 12px;
-      background: rgba(36, 50, 68, .45);
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .layout { display: grid; gap: 10px; min-height: 0; }
-    .card {
-      background: rgba(31, 41, 55, .7);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
       min-height: 0;
-      overflow: hidden;
     }
-    .card h4 { margin: 0 0 8px; font-size: 14px; }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
 
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .kpi {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: rgba(15, 23, 42, .55);
-      padding: 8px;
-    }
-    .kpi .label { color: var(--muted); font-size: 12px; }
-    .kpi .value { font-size: 19px; font-weight: 700; margin-top: 2px; }
-    .kpi .delta.good { color: var(--good); }
-    .kpi .delta.bad { color: var(--bad); }
+    .bars-card { grid-column: 1; grid-row: 1; }
+    .flow-card { grid-column: 2; grid-row: 1; }
+    .table-card { grid-column: 3; grid-row: 1 / span 2; }
+    .mini-card-a { grid-column: 1; grid-row: 2; }
+    .mini-card-b { grid-column: 2; grid-row: 2; }
 
-    .bars { display: grid; gap: 7px; }
-    .bar-line { display: grid; grid-template-columns: 120px 1fr 48px; gap: 8px; align-items: center; font-size: 12px; }
-    .bar-track { height: 10px; background: #0b1220; border-radius: 999px; border: 1px solid var(--border); overflow: hidden; }
-    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #60a5fa); }
+    .stack { display: grid; gap: 6px; align-content: end; }
+    .bar-line { display: grid; grid-template-columns: minmax(140px, 1fr) 2.4fr 72px; align-items: center; gap: 10px; font-size: 14px; }
+    .track { height: 10px; background: #edf2f9; border-radius: 999px; overflow: hidden; }
+    .fill { height: 100%; border-radius: 999px; }
 
-    .table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .table th, .table td { border-bottom: 1px solid #2b3547; padding: 6px; text-align: left; }
-    .table th { color: #93c5fd; font-weight: 600; }
+    .flow { display: grid; gap: 8px; align-content: end; }
+    .flow-row { display: grid; grid-template-columns: 160px 1fr; gap: 10px; align-items: center; font-size: 14px; }
+    .flow-track { height: 14px; border-radius: 999px; background: #edf2f9; overflow: hidden; display: flex; }
+    .seg-done { background: var(--green); }
+    .seg-late { background: var(--red); }
+    .seg-move { background: var(--orange); }
+    .seg-rest { background: #c7d3e6; }
 
-    .legend { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 7px 6px; border-bottom: 1px solid #e6edf7; text-align: left; }
+    th { color: #335c9b; font-size: 14px; }
+    .mini { color: var(--muted); font-size: 13px; }
+    .mini-bars { display: grid; gap: 8px; align-content: end; }
+    .mini-line { display: grid; grid-template-columns: 1.6fr 3fr 58px; gap: 8px; align-items: center; font-size: 13px; }
+    .mini-track { height: 9px; background: #edf2f9; border-radius: 999px; overflow: hidden; }
+    .mini-fill { height: 100%; background: linear-gradient(90deg, #2f7cf6, #6ea4ff); }
 
-    /* Variant layouts */
-    #v1 .layout { grid-template-columns: 1.2fr 1fr; grid-template-rows: auto 1fr; }
-    #v1 .kpis { grid-column: 1 / span 2; }
-
-    #v2 .layout { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-
-    #v3 .layout { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto 1fr; }
-    #v3 .kpis { grid-column: 1 / span 3; }
-
-    #v4 .layout { grid-template-columns: 1.2fr 1fr; grid-template-rows: 1fr 1fr; }
-
-    .radar {
-      width: 100%;
-      height: 100%;
-      min-height: 220px;
-    }
-
-    .footnote {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    .hint {
-      margin: 8px 2px 0;
-      color: #cbd5e1;
-      font-size: 13px;
-    }
-
-    @media (max-width: 1000px) {
-      .a4 { aspect-ratio: auto; min-height: 760px; }
-      #v1 .layout, #v2 .layout, #v3 .layout, #v4 .layout { grid-template-columns: 1fr; grid-template-rows: auto; }
-      #v1 .kpis, #v3 .kpis { grid-column: auto; }
+    @media (max-width: 1200px) {
+      body { overflow: auto; }
+      .board { height: auto; }
+      .content { grid-template-columns: 1fr; grid-template-rows: auto; }
+      .bars-card, .flow-card, .table-card, .mini-card-a, .mini-card-b { grid-column: auto; grid-row: auto; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="board">
     <div class="head">
       <div>
-        <h1 class="title">B24 · Прототипы дашборда задач (A4)</h1>
-        <p class="subtitle">4 варианта компоновки для BI Битрикс24: фокус на функционале, логике и сравнении февраль ↔ март.</p>
+        <h1>Аналитика Администрирование</h1>
+        <p>Оформление в светлом стиле под Битрикс24. Данные взяты из отчетов за февраль и март 2026 года.</p>
       </div>
     </div>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="v1">Вариант 1 · KPI + Воронка</button>
-      <button class="tab-btn" data-tab="v2">Вариант 2 · SLA/Сроки + Риски</button>
-      <button class="tab-btn" data-tab="v3">Вариант 3 · Нагрузка по уровням</button>
-      <button class="tab-btn" data-tab="v4">Вариант 4 · Quality Cockpit</button>
+    <div class="filters">
+      <strong>Месяц:</strong>
+      <button class="month-btn active" data-month="feb">Февраль 2026</button>
+      <button class="month-btn" data-month="mar">Март 2026</button>
+      <span class="note">Недостающие показатели по этапам потока смоделированы, чтобы визуал был полный.</span>
     </div>
 
-    <!-- Variant 1 -->
-    <section class="tab active" id="v1">
-      <div class="a4">
-        <div class="topline">
-          <div>Период: февраль и март · Срез: все подразделения · Типы задач: L1/L2/L3</div>
-          <div>Логика: обзор результата + конверсия потока</div>
-        </div>
-        <div class="layout">
-          <div class="card kpis">
-            <h4>Ключевые KPI (месяц к месяцу)</h4>
-            <div class="kpi-grid">
-              <div class="kpi"><div class="label">Всего задач</div><div class="value">12 480</div><div class="delta good">+8.3%</div></div>
-              <div class="kpi"><div class="label">Закрыто в срок</div><div class="value">84%</div><div class="delta good">+3.1 п.п.</div></div>
-              <div class="kpi"><div class="label">Просрочено</div><div class="value">11%</div><div class="delta bad">+1.2 п.п.</div></div>
-              <div class="kpi"><div class="label">Средний цикл</div><div class="value">4.7 дн</div><div class="delta good">-0.6 дн</div></div>
-            </div>
-          </div>
-          <div class="card">
-            <h4>Воронка задач по этапам</h4>
-            <div class="bars">
-              <div class="bar-line"><span>Создано</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><strong>100%</strong></div>
-              <div class="bar-line"><span>В работе</span><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div><strong>78%</strong></div>
-              <div class="bar-line"><span>На проверке</span><div class="bar-track"><div class="bar-fill" style="width:54%"></div></div><strong>54%</strong></div>
-              <div class="bar-line"><span>Закрыто</span><div class="bar-track"><div class="bar-fill" style="width:46%"></div></div><strong>46%</strong></div>
-            </div>
-            <p class="legend">Сценарий: быстро видно, где «теряется» поток и на какой стадии растет очередь.</p>
-          </div>
-          <div class="card">
-            <h4>Причины отклонений / возвратов</h4>
-            <div class="bars">
-              <div class="bar-line"><span>Неполные данные</span><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div><strong>65</strong></div>
-              <div class="bar-line"><span>Неверный приоритет</span><div class="bar-track"><div class="bar-fill" style="width:52%"></div></div><strong>52</strong></div>
-              <div class="bar-line"><span>Зависимость от смежных</span><div class="bar-track"><div class="bar-fill" style="width:39%"></div></div><strong>39</strong></div>
-              <div class="bar-line"><span>Нет исполнителя</span><div class="bar-track"><div class="bar-fill" style="width:27%"></div></div><strong>27</strong></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p class="hint">Когда выбирать: если нужен «директорский» обзор на 1 экран с быстрым сравнением месяца и мест потерь в процессе.</p>
-    </section>
+    <div class="kpis">
+      <div class="kpi"><div class="label">Всего задач в работе</div><div class="val" id="totalTasks">0</div><div class="delta" id="totalDelta"></div></div>
+      <div class="kpi"><div class="label">Выполнено</div><div class="val" id="doneTasks">0</div><div class="delta" id="doneRate"></div></div>
+      <div class="kpi"><div class="label">Просрочено</div><div class="val" id="lateTasks">0</div><div class="delta" id="lateRate"></div></div>
+      <div class="kpi"><div class="label">Перенесено</div><div class="val" id="moveTasks">0</div><div class="delta" id="moveRate"></div></div>
+      <div class="kpi"><div class="label">Осталось в работе</div><div class="val" id="restTasks">0</div><div class="delta mini">Расчет: всего − выполнено − просрочено − перенесено</div></div>
+    </div>
 
-    <!-- Variant 2 -->
-    <section class="tab" id="v2">
-      <div class="a4">
-        <div class="topline">
-          <div>Период: февраль и март · Фокус: соблюдение SLA и контроль рисков</div>
-          <div>Логика: план/факт + алерты проблемных зон</div>
-        </div>
-        <div class="layout">
-          <div class="card">
-            <h4>Скорость этапов vs норматив (SLA)</h4>
-            <svg viewBox="0 0 520 220" width="100%" height="220" aria-label="sla chart">
-              <line x1="40" y1="180" x2="500" y2="180" stroke="#334155" />
-              <line x1="40" y1="30" x2="40" y2="180" stroke="#334155" />
-              <polyline points="60,140 140,120 220,110 300,98 380,92 460,84" fill="none" stroke="#22d3ee" stroke-width="3"/>
-              <polyline points="60,130 140,122 220,115 300,113 380,110 460,108" fill="none" stroke="#a78bfa" stroke-width="3" stroke-dasharray="6 6"/>
-              <text x="46" y="197" fill="#9ca3af" font-size="11">T1</text>
-              <text x="126" y="197" fill="#9ca3af" font-size="11">T2</text>
-              <text x="206" y="197" fill="#9ca3af" font-size="11">T3</text>
-              <text x="286" y="197" fill="#9ca3af" font-size="11">T4</text>
-              <text x="366" y="197" fill="#9ca3af" font-size="11">T5</text>
-              <text x="446" y="197" fill="#9ca3af" font-size="11">T6</text>
-              <text x="355" y="45" fill="#22d3ee" font-size="11">Факт</text>
-              <text x="355" y="62" fill="#a78bfa" font-size="11">Норма</text>
-            </svg>
-            <p class="legend">Пунктир = норматив. Пересечения показывают этапы, где требуется перераспределение ресурсов.</p>
-          </div>
-          <div class="card">
-            <h4>Тепловая карта риска (уровень × подразделение)</h4>
-            <table class="table">
-              <thead><tr><th>Подразделение</th><th>L1</th><th>L2</th><th>L3</th></tr></thead>
-              <tbody>
-                <tr><td>Производство</td><td style="color:#34d399">Низкий</td><td style="color:#f59e0b">Средний</td><td style="color:#f87171">Высокий</td></tr>
-                <tr><td>Логистика</td><td style="color:#34d399">Низкий</td><td style="color:#34d399">Низкий</td><td style="color:#f59e0b">Средний</td></tr>
-                <tr><td>Закупки</td><td style="color:#f59e0b">Средний</td><td style="color:#f87171">Высокий</td><td style="color:#f87171">Высокий</td></tr>
-                <tr><td>Техподдержка</td><td style="color:#34d399">Низкий</td><td style="color:#f59e0b">Средний</td><td style="color:#f59e0b">Средний</td></tr>
-              </tbody>
-            </table>
-            <p class="legend">Риск можно считать из: % просрочки, средний возраст открытых задач, доля возвратов.</p>
-          </div>
-          <div class="card">
-            <h4>Алерты (задачи «под угрозой»)</h4>
-            <table class="table">
-              <thead><tr><th>Задача</th><th>Уровень</th><th>Стадия</th><th>Проблема</th></tr></thead>
-              <tbody>
-                <tr><td>#31459</td><td>L3</td><td>Согласование</td><td>Срок +4 дн</td></tr>
-                <tr><td>#31502</td><td>L2</td><td>В работе</td><td>Нет исполнителя</td></tr>
-                <tr><td>#31744</td><td>L3</td><td>Проверка</td><td>2 возврата</td></tr>
-                <tr><td>#31801</td><td>L1</td><td>Новая</td><td>Блокер данных</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="card">
-            <h4>Структура backlog по «возрасту»</h4>
-            <div class="bars">
-              <div class="bar-line"><span>0-2 дня</span><div class="bar-track"><div class="bar-fill" style="width:35%"></div></div><strong>35%</strong></div>
-              <div class="bar-line"><span>3-7 дней</span><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><strong>40%</strong></div>
-              <div class="bar-line"><span>8-14 дней</span><div class="bar-track"><div class="bar-fill" style="width:18%"></div></div><strong>18%</strong></div>
-              <div class="bar-line"><span>15+ дней</span><div class="bar-track"><div class="bar-fill" style="width:7%"></div></div><strong>7%</strong></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p class="hint">Когда выбирать: если ключевая цель — операционный контроль SLA и раннее выявление рисков с ежедневным мониторингом.</p>
-    </section>
+    <div class="content">
+      <section class="card bars-card">
+        <h3>Сравнение подразделений: выполнено и просрочено</h3>
+        <div class="stack" id="bars"></div>
+      </section>
 
-    <!-- Variant 3 -->
-    <section class="tab" id="v3">
-      <div class="a4">
-        <div class="topline">
-          <div>Фокус: баланс нагрузки между L1/L2/L3 и подразделениями</div>
-          <div>Логика: capacity planning и «узкие места» команды</div>
-        </div>
-        <div class="layout">
-          <div class="card kpis">
-            <h4>Баланс потока</h4>
-            <div class="kpi-grid">
-              <div class="kpi"><div class="label">Входящий поток</div><div class="value">+412 / нед</div></div>
-              <div class="kpi"><div class="label">Выходящий поток</div><div class="value">-395 / нед</div></div>
-              <div class="kpi"><div class="label">Net backlog</div><div class="value" style="color:#f59e0b">+17</div></div>
-              <div class="kpi"><div class="label">Utilization</div><div class="value">88%</div></div>
-            </div>
-          </div>
+      <section class="card flow-card">
+        <h3>Поток задач по ключевым направлениям</h3>
+        <div class="flow" id="flow"></div>
+        <p class="mini">Цвета: зеленый — выполнено, красный — просрочено, оранжевый — перенесено, серый — остаток.</p>
+      </section>
 
-          <div class="card">
-            <h4>Нагрузка по уровням сложности</h4>
-            <svg viewBox="0 0 380 250" width="100%" height="250">
-              <rect x="40" y="110" width="70" height="120" fill="#22d3ee" opacity=".8"/>
-              <rect x="140" y="70" width="70" height="160" fill="#60a5fa" opacity=".85"/>
-              <rect x="240" y="130" width="70" height="100" fill="#a78bfa" opacity=".9"/>
-              <text x="60" y="245" fill="#9ca3af" font-size="12">L1</text>
-              <text x="160" y="245" fill="#9ca3af" font-size="12">L2</text>
-              <text x="260" y="245" fill="#9ca3af" font-size="12">L3</text>
-            </svg>
-            <p class="legend">Сопоставить «кол-во задач» и «доступные FTE» в BI для расчета дефицита мощности.</p>
-          </div>
+      <section class="card table-card">
+        <h3>Лидеры и зоны внимания</h3>
+        <table>
+          <thead>
+            <tr><th>Подразделение</th><th>Вып.</th><th>Проср.</th><th>Перен.</th></tr>
+          </thead>
+          <tbody id="tableRows"></tbody>
+        </table>
+      </section>
 
-          <div class="card">
-            <h4>Топ команд по перегрузке</h4>
-            <div class="bars">
-              <div class="bar-line"><span>Цех №2</span><div class="bar-track"><div class="bar-fill" style="width:92%"></div></div><strong>92%</strong></div>
-              <div class="bar-line"><span>Закупки</span><div class="bar-track"><div class="bar-fill" style="width:84%"></div></div><strong>84%</strong></div>
-              <div class="bar-line"><span>Ремонт</span><div class="bar-track"><div class="bar-fill" style="width:76%"></div></div><strong>76%</strong></div>
-              <div class="bar-line"><span>Логистика</span><div class="bar-track"><div class="bar-fill" style="width:63%"></div></div><strong>63%</strong></div>
-            </div>
-          </div>
+      <section class="card mini-card-a">
+        <h3>Доля выполнения по основным подразделениям</h3>
+        <div class="mini-bars" id="miniDone"></div>
+      </section>
 
-          <div class="card">
-            <h4>Sankey-логика (для BI реализации)</h4>
-            <p class="legend">
-              Источник данных: <strong>Тип задачи → Уровень сложности → Подразделение → Статус закрытия</strong>.<br>
-              На листе BI отрисовать Sankey, чтобы видеть, какие типы работ чаще всего утекают в просрочку и где концентрируется нагрузка.
-            </p>
-            <table class="table">
-              <thead><tr><th>Поток</th><th>Доля</th></tr></thead>
-              <tbody>
-                <tr><td>Инциденты → L2 → Производство → Закрыто</td><td>28%</td></tr>
-                <tr><td>Запросы → L1 → Логистика → Закрыто</td><td>21%</td></tr>
-                <tr><td>Изменения → L3 → Закупки → Просрочка</td><td>14%</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <p class="hint">Когда выбирать: если нужен инструмент для перераспределения людей/очередей и планирования capacity.</p>
-    </section>
-
-    <!-- Variant 4 -->
-    <section class="tab" id="v4">
-      <div class="a4">
-        <div class="topline">
-          <div>Фокус: качество процесса и зрелость по подразделениям</div>
-          <div>Логика: «радар + контрольные карты + причины»</div>
-        </div>
-        <div class="layout">
-          <div class="card">
-            <h4>Радар зрелости (Process Health Radar)</h4>
-            <svg class="radar" viewBox="0 0 300 260">
-              <polygon points="150,30 230,70 250,150 200,220 100,220 50,150 70,70" fill="none" stroke="#334155"/>
-              <polygon points="150,60 205,88 220,145 185,196 115,196 80,145 95,88" fill="rgba(34,211,238,.2)" stroke="#22d3ee" stroke-width="2"/>
-              <text x="143" y="20" fill="#9ca3af" font-size="11">SLA</text>
-              <text x="236" y="70" fill="#9ca3af" font-size="11">Качество данных</text>
-              <text x="248" y="154" fill="#9ca3af" font-size="11">Скорость</text>
-              <text x="188" y="236" fill="#9ca3af" font-size="11">Предсказуемость</text>
-              <text x="72" y="236" fill="#9ca3af" font-size="11">Нагрузка</text>
-              <text x="22" y="154" fill="#9ca3af" font-size="11">Возвраты</text>
-              <text x="60" y="70" fill="#9ca3af" font-size="11">Backlog age</text>
-            </svg>
-          </div>
-          <div class="card">
-            <h4>Контрольная карта (стабильность цикла)</h4>
-            <svg viewBox="0 0 520 220" width="100%" height="220">
-              <line x1="30" y1="180" x2="500" y2="180" stroke="#334155"/>
-              <line x1="30" y1="50" x2="500" y2="50" stroke="#f87171" stroke-dasharray="6 6"/>
-              <line x1="30" y1="90" x2="500" y2="90" stroke="#22d3ee" stroke-dasharray="4 4"/>
-              <polyline points="45,120 90,105 135,112 180,95 225,85 270,110 315,82 360,78 405,130 450,88" fill="none" stroke="#a78bfa" stroke-width="3"/>
-            </svg>
-            <p class="legend">UCL/LCL можно считать автоматически: медиана цикла + 1.5*IQR.</p>
-          </div>
-          <div class="card">
-            <h4>Pareto причин просрочки (80/20)</h4>
-            <div class="bars">
-              <div class="bar-line"><span>Ожидание согласования</span><div class="bar-track"><div class="bar-fill" style="width:81%"></div></div><strong>81</strong></div>
-              <div class="bar-line"><span>Не хватает данных</span><div class="bar-track"><div class="bar-fill" style="width:66%"></div></div><strong>66</strong></div>
-              <div class="bar-line"><span>Смена приоритета</span><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><strong>43</strong></div>
-              <div class="bar-line"><span>Зависимость от подрядчика</span><div class="bar-track"><div class="bar-fill" style="width:29%"></div></div><strong>29</strong></div>
-            </div>
-          </div>
-          <div class="card">
-            <h4>Рекомендуемая логика внедрения</h4>
-            <table class="table">
-              <thead><tr><th>Шаг</th><th>Что делаем в BI</th><th>Цель</th></tr></thead>
-              <tbody>
-                <tr><td>1</td><td>Нормализация статусов из выгрузки</td><td>Единая воронка</td></tr>
-                <tr><td>2</td><td>Сопоставление с уровнями L1/L2/L3</td><td>Сравнимость нагрузок</td></tr>
-                <tr><td>3</td><td>Добавление SLA-метрик и risk-score</td><td>Ранние алерты</td></tr>
-                <tr><td>4</td><td>Сбор «директорского» листа A4</td><td>Еженедельное решение</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <p class="hint">Когда выбирать: если цель — управлять качеством процесса, а не только количеством закрытых задач.</p>
-    </section>
-
-    <p class="footnote">
-      Примечание: значения на графиках демонстрационные (MVP-плейсхолдеры). Для боевого BI подставьте реальные поля из февральского/мартовского файла и скана выгрузки
-      (например: дата создания, дата закрытия, уровень L1/L2/L3, подразделение, причина возврата, статус SLA).
-    </p>
+      <section class="card mini-card-b">
+        <h3>Где сосредоточен объем задач</h3>
+        <div class="mini-bars" id="miniLoad"></div>
+      </section>
+    </div>
   </div>
 
   <script>
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabs = document.querySelectorAll('.tab');
+    const data = {
+      feb: [
+        { name: "1-1 Производство Белорецк", plan: 5, old: 1, done: 0, late: 0, move: 0 },
+        { name: "1-2 Производство Технопарк", plan: 15, old: 3, done: 0, late: 0, move: 4 },
+        { name: "2 Качество", plan: 15, old: 0, done: 0, late: 0, move: 0 },
+        { name: "3 Разработка и технология", plan: 132, old: 24, done: 8, late: 10, move: 11 },
+        { name: "4 Продажи", plan: 139, old: 12, done: 15, late: 12, move: 5 },
+        { name: "5 Снабжение и закупки", plan: 9, old: 2, done: 0, late: 2, move: 0 },
+        { name: "6 Развитие процессов", plan: 27, old: 1, done: 9, late: 0, move: 2 },
+        { name: "7 Операционная эффективность", plan: 8, old: 0, done: 0, late: 4, move: 0 },
+        { name: "8 Персонал", plan: 39, old: 3, done: 2, late: 1, move: 9 },
+        { name: "9 Финансы", plan: 55, old: 1, done: 28, late: 4, move: 21 },
+        { name: "10 Безопасность", plan: 5, old: 1, done: 0, late: 1, move: 0 },
+        { name: "11 Охрана труда", plan: 75, old: 2, done: 1, late: 0, move: 1 },
+        { name: "12 Право", plan: 0, old: 0, done: 0, late: 0, move: 0 },
+        { name: "13 Автоматизация", plan: 48, old: 66, done: 0, late: 0, move: 0 },
+        { name: "14 Администрирование", plan: 17, old: 1, done: 11, late: 0, move: 3 },
+        { name: "15 Техническая политика", plan: 20, old: 1, done: 0, late: 6, move: 0 },
+        { name: "16 Искусственный интеллект", plan: 71, old: 5, done: 0, late: 30, move: 0 }
+      ],
+      mar: [
+        { name: "1-1 Производство Белорецк", plan: 6, old: 0, done: 0, late: 0, move: 4 },
+        { name: "1-2 Производство Технопарк", plan: 14, old: 0, done: 0, late: 1, move: 0 },
+        { name: "2 Качество", plan: 19, old: 0, done: 0, late: 0, move: 0 },
+        { name: "3 Разработка и технология", plan: 113, old: 27, done: 8, late: 18, move: 11 },
+        { name: "4 Продажи", plan: 220, old: 37, done: 4, late: 8, move: 104 },
+        { name: "5 Снабжение и закупки", plan: 3, old: 2, done: 0, late: 0, move: 0 },
+        { name: "6 Развитие процессов", plan: 16, old: 1, done: 1, late: 0, move: 4 },
+        { name: "7 Операционная эффективность", plan: 3, old: 4, done: 0, late: 3, move: 0 },
+        { name: "8 Персонал", plan: 41, old: 4, done: 8, late: 0, move: 2 },
+        { name: "9 Финансы", plan: 12, old: 4, done: 0, late: 3, move: 0 },
+        { name: "10 Безопасность", plan: 0, old: 0, done: 0, late: 0, move: 0 },
+        { name: "11 Охрана труда", plan: 74, old: 3, done: 0, late: 0, move: 1 },
+        { name: "12 Право", plan: 0, old: 0, done: 0, late: 0, move: 0 },
+        { name: "13 Автоматизация", plan: 12, old: 0, done: 0, late: 10, move: 0 },
+        { name: "14 Администрирование", plan: 8, old: 1, done: 4, late: 0, move: 3 },
+        { name: "15 Техническая политика", plan: 69, old: 6, done: 3, late: 1, move: 4 },
+        { name: "16 Искусственный интеллект", plan: 53, old: 41, done: 0, late: 5, move: 0 }
+      ]
+    };
 
-    tabBtns.forEach(btn => {
+    const num = new Intl.NumberFormat('ru-RU');
+    let current = 'feb';
+
+    function totals(rows) {
+      return rows.reduce((a, x) => {
+        a.total += x.plan + x.old;
+        a.done += x.done;
+        a.late += x.late;
+        a.move += x.move;
+        return a;
+      }, { total: 0, done: 0, late: 0, move: 0 });
+    }
+
+    function pct(v, t) { return t ? ((v / t) * 100) : 0; }
+
+    function updateView() {
+      const rows = data[current];
+      const prev = data[current === 'feb' ? 'mar' : 'feb'];
+      const t = totals(rows);
+      const p = totals(prev);
+      const rest = Math.max(0, t.total - t.done - t.late - t.move);
+
+      totalTasks.textContent = num.format(t.total);
+      totalDelta.textContent = (t.total - p.total >= 0 ? '+' : '') + num.format(t.total - p.total) + ' к соседнему месяцу';
+      totalDelta.className = 'delta ' + (t.total >= p.total ? 'good' : 'bad');
+
+      doneTasks.textContent = num.format(t.done);
+      doneRate.textContent = pct(t.done, t.total).toFixed(1).replace('.', ',') + '% от общего объема';
+      doneRate.className = 'delta good';
+
+      lateTasks.textContent = num.format(t.late);
+      lateRate.textContent = pct(t.late, t.total).toFixed(1).replace('.', ',') + '% от общего объема';
+      lateRate.className = 'delta bad';
+
+      moveTasks.textContent = num.format(t.move);
+      moveRate.textContent = pct(t.move, t.total).toFixed(1).replace('.', ',') + '% от общего объема';
+      moveRate.className = 'delta';
+
+      restTasks.textContent = num.format(rest);
+
+      const topByLoad = [...rows]
+        .map(r => ({ ...r, total: r.plan + r.old }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 8);
+
+      const maxDone = Math.max(...topByLoad.map(x => x.done), 1);
+      const maxLate = Math.max(...topByLoad.map(x => x.late), 1);
+      bars.innerHTML = topByLoad.map(r => {
+        const doneW = (r.done / maxDone) * 100;
+        const lateW = (r.late / maxLate) * 100;
+        return `<div class="bar-line">
+          <span title="${r.name}">${r.name.replace(/^\d+[\-\.]?\d*\s*/, '').slice(0, 20)}</span>
+          <div>
+            <div class="track"><div class="fill" style="width:${doneW}%;background:#2ba86b"></div></div>
+            <div class="track" style="margin-top:3px"><div class="fill" style="width:${lateW}%;background:#d64545"></div></div>
+          </div>
+          <strong>${r.done}/${r.late}</strong>
+        </div>`;
+      }).join('');
+
+      flow.innerHTML = topByLoad.slice(0, 5).map(r => {
+        const total = r.plan + r.old || 1;
+        const doneW = pct(r.done, total);
+        const lateW = pct(r.late, total);
+        const moveW = pct(r.move, total);
+        const restW = Math.max(0, 100 - doneW - lateW - moveW);
+        return `<div class="flow-row">
+          <span title="${r.name}">${r.name.replace(/^\d+[\-\.]?\d*\s*/, '').slice(0, 24)}</span>
+          <div class="flow-track">
+            <div class="seg-done" style="width:${doneW}%"></div>
+            <div class="seg-late" style="width:${lateW}%"></div>
+            <div class="seg-move" style="width:${moveW}%"></div>
+            <div class="seg-rest" style="width:${restW}%"></div>
+          </div>
+        </div>`;
+      }).join('');
+
+      const zoneRows = [...rows]
+        .sort((a, b) => (b.late + b.move) - (a.late + a.move))
+        .slice(0, 8);
+
+      tableRows.innerHTML = zoneRows.map(r => `<tr>
+        <td>${r.name}</td>
+        <td>${r.done}</td>
+        <td style="color:#d64545">${r.late}</td>
+        <td style="color:#f0a020">${r.move}</td>
+      </tr>`).join('');
+
+      const topDoneRate = [...rows]
+        .map(r => ({ ...r, total: r.plan + r.old, rate: pct(r.done, r.plan + r.old) }))
+        .filter(r => r.total > 0)
+        .sort((a, b) => b.rate - a.rate)
+        .slice(0, 4);
+
+      miniDone.innerHTML = topDoneRate.map(r => `
+        <div class="mini-line">
+          <span title="${r.name}">${r.name.replace(/^\d+[\-\.]?\d*\s*/, '').slice(0, 22)}</span>
+          <div class="mini-track"><div class="mini-fill" style="width:${r.rate}%"></div></div>
+          <strong>${r.rate.toFixed(0)}%</strong>
+        </div>
+      `).join('');
+
+      const topLoad = [...rows]
+        .map(r => ({ ...r, total: r.plan + r.old }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 4);
+      const maxLoad = Math.max(...topLoad.map(x => x.total), 1);
+      miniLoad.innerHTML = topLoad.map(r => `
+        <div class="mini-line">
+          <span title="${r.name}">${r.name.replace(/^\d+[\-\.]?\d*\s*/, '').slice(0, 22)}</span>
+          <div class="mini-track"><div class="mini-fill" style="width:${(r.total / maxLoad) * 100}%"></div></div>
+          <strong>${r.total}</strong>
+        </div>
+      `).join('');
+    }
+
+    document.querySelectorAll('.month-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        tabs.forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
+        current = btn.dataset.month;
+        updateView();
       });
     });
+
+    updateView();
   </script>
 </body>
 </html>
